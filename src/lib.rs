@@ -1,3 +1,4 @@
+pub mod evol_options;
 pub mod rng;
 
 pub use rng::RandomNumberGenerator;
