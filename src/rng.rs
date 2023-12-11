@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_fetch_uniform_with_positive_range() {
-        let mut rng = crate::RandomNumberGenerator::new();
+        let mut rng = super::RandomNumberGenerator::new();
         let result = rng.fetch_uniform(0.0, 1.0, 5);
 
         // Check that the result has the correct length
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_fetch_uniform_with_negative_range() {
-        let mut rng = crate::RandomNumberGenerator::new();
+        let mut rng = super::RandomNumberGenerator::new();
         let result = rng.fetch_uniform(-1.0, 1.0, 3);
 
         assert_eq!(result.len(), 3);
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_fetch_uniform_with_large_range() {
-        let mut rng = crate::RandomNumberGenerator::new();
+        let mut rng = super::RandomNumberGenerator::new();
         let result = rng.fetch_uniform(-1000.0, 1000.0, 10);
 
         assert_eq!(result.len(), 10);
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_fetch_uniform_with_empty_result() {
-        let mut rng = crate::RandomNumberGenerator::new();
+        let mut rng = super::RandomNumberGenerator::new();
         let result = rng.fetch_uniform(1.0, 2.0, 0);
 
         assert!(result.is_empty());
