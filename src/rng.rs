@@ -19,6 +19,12 @@ impl RandomNumberGenerator {
     }
 }
 
+impl Default for RandomNumberGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 mod tests {
 
     #[test]
