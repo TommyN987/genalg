@@ -8,14 +8,12 @@
 //! ```rust
 //! use genalg::rng::RandomNumberGenerator;
 //!
-//! fn main() {
 //!     let mut rng = RandomNumberGenerator::new();
 //!     let random_numbers = rng.fetch_uniform(0.0, 1.0, 5);
 //!
 //!     for number in random_numbers {
 //!         println!("Random Number: {}", number);
 //!     }
-//! }
 //! ```
 
 use rand::{rngs::ThreadRng, Rng};
