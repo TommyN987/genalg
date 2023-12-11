@@ -6,7 +6,8 @@
 //! ## Example
 //!
 //! ```rust
-//! use genalg::phenotype::{Phenotype, RandomNumberGenerator};
+//! use genalg::phenotype::Phenotype;
+//! use genalg::rng::RandomNumberGenerator;
 //!
 //! struct MyPhenotype {
 //!     // ... fields and methods for your specific phenotype ...
@@ -46,7 +47,8 @@
 //! To use the `Phenotype` trait, implement it for your custom phenotype type.
 //!
 //! ```rust
-//! use genalg::phenotype::{Phenotype, RandomNumberGenerator};
+//! use genalg::phenotype::Phenotype;
+//! use genalg::rng::RandomNumberGenerator;
 //!
 //! struct MyPhenotype {
 //!     // ... fields and methods for your specific phenotype ...
@@ -83,7 +85,8 @@ pub trait Phenotype {
     /// ## Example
     ///
     /// ```rust
-    /// use my_library::{Phenotype, RandomNumberGenerator};
+    /// use genalg::phenotype::Phenotype;
+    /// use genalg::rng::RandomNumberGenerator;
     ///
     /// struct MyPhenotype {
     ///     // ... fields for your specific phenotype ...
@@ -119,7 +122,8 @@ pub trait Phenotype {
     /// ## Example
     ///
     /// ```rust
-    /// use my_library::{Phenotype, RandomNumberGenerator};
+    /// use genalg::phenotype::Phenotype;
+    /// use genalg::rng::RandomNumberGenerator;
     ///
     /// struct MyPhenotype {
     ///     // ... fields and methods for your specific phenotype ...
