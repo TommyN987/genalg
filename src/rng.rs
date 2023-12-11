@@ -1,6 +1,25 @@
+//! # RandomNumberGenerator
+//!
+//! The `RandomNumberGenerator` struct provides a simple interface for generating
+//! random floating-point numbers within a specified range using the `rand` crate.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use genalg::RandomNumberGenerator;
+//!
+//! fn main() {
+//!     let mut rng = RandomNumberGenerator::new();
+//!     let random_numbers = rng.fetch_uniform(0.0, 1.0, 5);
+//!
+//!     for number in random_numbers {
+//!         println!("Random Number: {}", number);
+//!     }
+//! }
+//! ```
+
 use rand::{rngs::ThreadRng, Rng};
 use std::collections::VecDeque;
-
 pub struct RandomNumberGenerator {
     pub rng: ThreadRng,
 }
@@ -12,6 +31,30 @@ impl RandomNumberGenerator {
         }
     }
 
+    /// Generates a specified number of random floating-point numbers within the given range.
+    ///
+    /// # Parameters
+    ///
+    /// - `from`: The lower bound of the range (inclusive).
+    /// - `to`: The upper bound of the range (exclusive).
+    /// - `num`: The number of random numbers to generate.
+    ///
+    /// # Returns
+    ///
+    /// A `VecDeque` containing the generated random numbers.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genalg::RandomNumberGenerator;
+    ///
+    /// let mut rng = RandomNumberGenerator::new();
+    /// let random_numbers = rng.fetch_uniform(0.0, 1.0, 5);
+    ///
+    /// for number in random_numbers {
+    ///     println!("Random Number: {}", number);
+    /// }
+    /// ```
     pub fn fetch_uniform(&mut self, from: f32, to: f32, num: usize) -> VecDeque<f32> {
         let mut uniform_numbers = VecDeque::new();
         uniform_numbers.extend((0..num).map(|_| self.rng.gen_range(from..to)));
