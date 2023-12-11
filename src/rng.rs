@@ -6,7 +6,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use genalg::RandomNumberGenerator;
+//! use genalg::rng::RandomNumberGenerator;
 //!
 //! fn main() {
 //!     let mut rng = RandomNumberGenerator::new();
@@ -46,7 +46,7 @@ impl RandomNumberGenerator {
     /// # Examples
     ///
     /// ```rust
-    /// use genalg::RandomNumberGenerator;
+    /// use genalg::rng::RandomNumberGenerator;
     ///
     /// let mut rng = RandomNumberGenerator::new();
     /// let random_numbers = rng.fetch_uniform(0.0, 1.0, 5);
