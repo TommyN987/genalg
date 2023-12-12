@@ -1,6 +1,6 @@
 use super::BreedStrategy;
 use crate::phenotype::Phenotype;
-use std::cell::RefCell;
+use std::{cell::RefCell, fmt::Error};
 
 /// # OrdinaryStrategy
 ///
@@ -38,7 +38,7 @@ where
         parents: &[Pheno],
         evol_options: &crate::evol_options::EvolutionOptions,
         rng: &mut crate::rng::RandomNumberGenerator,
-    ) -> Vec<Pheno> {
+    ) -> Result<Vec<Pheno>, Error> {
         let mut children: Vec<Pheno> = Vec::new();
         let mut winner_previous_generation = RefCell::new(parents[0]);
         children.push(*winner_previous_generation.get_mut());
@@ -56,7 +56,7 @@ where
             child
         }));
 
-        children
+        Ok(children)
     }
 }
 
@@ -76,7 +76,7 @@ mod tests {
         struct MockPhenotype;
 
         impl Phenotype for MockPhenotype {
-            fn crossover(&self, other: &Self) {}
+            fn crossover(&mut self, other: &Self) {}
             fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
         }
 
@@ -87,7 +87,7 @@ mod tests {
             child
         }));
 
-        let children = strategy.breed(&parents, &evol_options, &mut rng);
+        let children = strategy.breed(&parents, &evol_options, &mut rng).unwrap();
 
         assert_eq!(children.len(), evol_options.get_num_offspring());
     }
