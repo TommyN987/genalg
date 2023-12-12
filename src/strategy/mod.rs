@@ -2,9 +2,12 @@
 ///
 /// The `BreedStrategy` trait defines the interface for strategies responsible for breeding
 /// new individuals (phenotypes) based on a set of parent individuals and evolution options.
-use crate::{evol_options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator};
-
+pub mod bounded;
 pub mod ordinary;
+
+use std::fmt::Error;
+
+use crate::{evol_options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator};
 
 pub trait BreedStrategy<Pheno: Phenotype> {
     /// Breeds new individuals based on a set of parent individuals and evolution options.
@@ -26,5 +29,5 @@ pub trait BreedStrategy<Pheno: Phenotype> {
         parents: &[Pheno],
         evol_options: &EvolutionOptions,
         rng: &mut RandomNumberGenerator,
-    ) -> Vec<Pheno>;
+    ) -> Result<Vec<Pheno>, Error>;
 }
