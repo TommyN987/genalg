@@ -66,6 +66,7 @@ impl Default for RandomNumberGenerator {
     }
 }
 
+#[cfg(test)]
 mod tests {
 
     #[test]
