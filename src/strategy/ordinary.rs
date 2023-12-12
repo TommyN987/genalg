@@ -1,3 +1,8 @@
+//! # OrdinaryStrategy
+//!
+//! The `OrdinaryStrategy` struct represents a basic breeding strategy where the first
+//! parent is considered as the winner of the previous generation, and the remaining
+//! parents are used to create new individuals through crossover and mutation.
 use super::BreedStrategy;
 use crate::phenotype::Phenotype;
 use std::{cell::RefCell, fmt::Error};
@@ -7,10 +12,6 @@ use std::{cell::RefCell, fmt::Error};
 /// The `OrdinaryStrategy` struct represents a basic breeding strategy where the first
 /// parent is considered as the winner of the previous generation, and the remaining
 /// parents are used to create new individuals through crossover and mutation.
-///
-/// ## Implementing the Trait
-///
-/// To use the `OrdinaryStrategy`, implement the `BreedStrategy` trait for it.
 pub struct OrdinaryStrategy;
 
 impl<Pheno> BreedStrategy<Pheno> for OrdinaryStrategy
@@ -32,7 +33,8 @@ where
     ///
     /// ## Returns
     ///
-    /// A vector containing the newly bred individuals.
+    /// A Result with vector containing the newly bred individuals.
+    /// This strategy always returns a vector of individuals.
     fn breed(
         &self,
         parents: &[Pheno],

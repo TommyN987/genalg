@@ -1,3 +1,13 @@
+//! # BoundedBreedStrategy
+//!
+//! Similarly to `OrdinaryStrategy`, the `BoundedBreedStrategy` struct represents
+//! a breeding strategy where the first parent is considered the winner
+//! of the previous generation, and the remaining parents are used to create
+//! new individuals through crossover and mutation.
+//!
+//! However, the `BoundedBreedStrategy` imposes bounds on the phenotypes during evolution.
+//! The algorithm develops a phenotype within the specified bounds, ensuring that the resulting
+//! phenotype satisfies the constraints set up by the `Magnitude` trait.
 use std::{cell::RefCell, fmt::Error, marker::PhantomData};
 
 use crate::{
@@ -7,6 +17,16 @@ use crate::{
 
 use super::BreedStrategy;
 
+/// # BoundedBreedStrategy
+///
+/// Similarly to `OrdinaryStrategy`, the `BoundedBreedStrategy` struct represents
+/// a breeding strategy where the first parent is considered the winner
+/// of the previous generation, and the remaining parents are used to create
+/// new individuals through crossover and mutation.
+///
+/// However, the `BoundedBreedStrategy` imposes bounds on the phenotypes during evolution.
+/// The algorithm develops a phenotype within the specified bounds, ensuring that the resulting
+/// phenotype satisfies the constraints set up by the `Magnitude` trait.
 pub struct BoundedBreedStrategy<Pheno>
 where
     Pheno: Phenotype + Magnitude,
@@ -18,6 +38,21 @@ impl<Pheno> BreedStrategy<Pheno> for BoundedBreedStrategy<Pheno>
 where
     Pheno: Phenotype + Magnitude,
 {
+    /// Breeds offspring from a set of parent phenotypes, ensuring the offspring
+    /// stays within the specified phenotype bounds.
+    ///
+    /// This method uses a winner-takes-all approach, selecting the first parent
+    /// as the winner and evolving it to create offspring.
+    ///
+    /// # Arguments
+    ///
+    /// * `parents` - A slice of parent phenotypes.
+    /// * `evol_options` - Evolution options controlling the breeding process.
+    /// * `rng` - A random number generator for introducing randomness.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a vector of offspring phenotypes or an `Error` if breeding fails.
     fn breed(
         &self,
         parents: &[Pheno],
@@ -57,6 +92,26 @@ impl<Pheno> BoundedBreedStrategy<Pheno>
 where
     Pheno: Phenotype + Magnitude,
 {
+    /// Develops a phenotype within the specified bounds, ensuring that the resulting
+    /// phenotype satisfies the magnitude constraints.
+    ///
+    /// # Arguments
+    ///
+    /// * `pheno` - The initial phenotype to be developed.
+    /// * `rng` - A random number generator for introducing randomness.
+    /// * `initial_mutate` - A flag indicating whether to apply initial mutation.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the developed phenotype or an `Error` if development fails.
+    ///
+    /// # Details
+    ///
+    /// This method attempts to develop a phenotype within the specified magnitude bounds.
+    /// If `initial_mutate` is true, an initial mutation is applied to the input phenotype.
+    /// The development process involves repeated mutation attempts until a phenotype
+    /// within the specified bounds is achieved. If after 1000 attempts, a valid phenotype
+    /// is not obtained, an error is returned.
     fn develop(
         &self,
         pheno: Pheno,
