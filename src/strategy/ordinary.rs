@@ -59,3 +59,36 @@ where
         children
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        evol_options, phenotype::Phenotype, rng::RandomNumberGenerator, strategy::BreedStrategy,
+    };
+
+    #[test]
+    fn test_breed() {
+        let mut rng = RandomNumberGenerator::new();
+        let evol_options = evol_options::EvolutionOptions::default();
+        let strategy = super::OrdinaryStrategy;
+
+        #[derive(Clone, Copy)]
+        struct MockPhenotype;
+
+        impl Phenotype for MockPhenotype {
+            fn crossover(&self, other: &Self) {}
+            fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
+        }
+
+        let mut parents = Vec::<MockPhenotype>::new();
+
+        parents.extend((0..5).into_iter().map(|value| {
+            let child = MockPhenotype;
+            child
+        }));
+
+        let children = strategy.breed(&parents, &evol_options, &mut rng);
+
+        assert_eq!(children.len(), evol_options.get_num_offspring());
+    }
+}
