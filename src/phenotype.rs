@@ -15,7 +15,7 @@
 //! }
 //!
 //! impl Phenotype for MyPhenotype {
-//!     fn crossover(&self, other: &Self) {
+//!     fn crossover(&mut self, other: &Self) {
 //!         // Implementation of crossover for MyPhenotype
 //!         // ...
 //!     }
@@ -57,7 +57,7 @@
 //! }
 //!
 //! impl Phenotype for MyPhenotype {
-//!     fn crossover(&self, other: &Self) {
+//!     fn crossover(&mut self, other: &Self) {
 //!         // Implementation of crossover for MyPhenotype
 //!         // ...
 //!     }
@@ -99,7 +99,7 @@ where
     /// }
     ///
     /// impl Phenotype for MyPhenotype {
-    ///     fn crossover(&self, other: &Self) {
+    ///     fn crossover(&mut self, other: &Self) {
     ///         // Implementation of crossover for MyPhenotype
     ///         // ...
     ///     }
@@ -137,7 +137,7 @@ where
     /// }
     ///
     /// impl Phenotype for MyPhenotype {
-    ///     fn crossover(&self, other: &Self) {
+    ///     fn crossover(&mut self, other: &Self) {
     ///         // Implementation of crossover for MyPhenotype
     ///         // ...
     ///     }
