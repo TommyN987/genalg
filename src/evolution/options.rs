@@ -7,7 +7,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use genalg::evol_options::{EvolutionOptions, LogLevel};
+//! use genalg::evolution::options::{EvolutionOptions, LogLevel};
 //!
 //! // Create a new EvolutionOptions instance with custom parameters
 //! let custom_options = EvolutionOptions::new(200, LogLevel::Verbose, 50, 10);
