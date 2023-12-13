@@ -37,3 +37,6 @@ pub trait BreedStrategy<Pheno: Phenotype> {
         rng: &mut RandomNumberGenerator,
     ) -> Result<Vec<Pheno>, Error>;
 }
+
+pub use bounded::{BoundedBreedStrategy, Magnitude};
+pub use ordinary::OrdinaryStrategy;
