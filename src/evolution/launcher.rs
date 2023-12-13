@@ -6,12 +6,14 @@ use super::{
 };
 use crate::{phenotype::Phenotype, rng::RandomNumberGenerator, strategy::BreedStrategy};
 
+/// Represents the result of an evolution, containing a phenotype and its associated score.
 #[derive(Clone, Debug)]
 pub struct EvolutionResult<Pheno: Phenotype> {
     pub pheno: Pheno,
     pub score: f64,
 }
 
+/// Manages the evolution process using a specified breeding strategy and challenge.
 pub struct EvolutionLauncher<Pheno, Strategy, Chall>
 where
     Pheno: Phenotype,
@@ -29,6 +31,16 @@ where
     Chall: Challenge<Pheno>,
     Strategy: BreedStrategy<Pheno>,
 {
+    /// Creates a new `EvolutionLauncher` instance with the specified breeding strategy and challenge.
+    ///
+    /// # Arguments
+    ///
+    /// * `strategy` - The breeding strategy used for generating offspring during evolution.
+    /// * `challenge` - The challenge used to evaluate the fitness of phenotypes.
+    ///
+    /// # Returns
+    ///
+    /// A new `EvolutionLauncher` instance.
     pub fn new(strategy: Strategy, challenge: Chall) -> Self {
         Self {
             strategy,
@@ -36,7 +48,17 @@ where
             _marker: PhantomData,
         }
     }
-
+    /// Evolves a population of phenotypes over multiple generations.
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Evolution options controlling the evolution process.
+    /// * `starting_value` - The initial phenotype from which evolution begins.
+    /// * `rng` - A random number generator for introducing randomness.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the best-evolved phenotype and its associated score, or an `Error` if evolution fails.
     pub fn evolve(
         &self,
         options: &EvolutionOptions,
