@@ -9,7 +9,7 @@
 //! use genalg::phenotype::Phenotype;
 //! use genalg::rng::RandomNumberGenerator;
 //!
-//! #[derive(Copy, Clone)]
+//! #[derive(Copy, Clone, Debug)]
 //! struct MyPhenotype {
 //!     // ... fields and methods for your specific phenotype ...
 //! }
@@ -51,7 +51,7 @@
 //! use genalg::phenotype::Phenotype;
 //! use genalg::rng::RandomNumberGenerator;
 //!
-//! #[derive(Copy, Clone)]
+//! #[derive(Copy, Clone, Debug)]
 //! struct MyPhenotype {
 //!     // ... fields and methods for your specific phenotype ...
 //! }
@@ -95,7 +95,7 @@ where
     /// use genalg::phenotype::Phenotype;
     /// use genalg::rng::RandomNumberGenerator;
     ///
-    /// #[derive(Copy, Clone)]
+    /// #[derive(Copy, Clone, Debug)]
     /// struct MyPhenotype {
     ///     // ... fields for your specific phenotype ...
     /// }
@@ -133,7 +133,7 @@ where
     /// use genalg::phenotype::Phenotype;
     /// use genalg::rng::RandomNumberGenerator;
     ///
-    /// #[derive(Copy, Clone)]
+    /// #[derive(Copy, Clone, Debug)]
     /// struct MyPhenotype {
     ///     // ... fields and methods for your specific phenotype ...
     /// }
