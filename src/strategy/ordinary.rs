@@ -38,7 +38,7 @@ where
     fn breed(
         &self,
         parents: &[Pheno],
-        evol_options: &crate::evol_options::EvolutionOptions,
+        evol_options: &crate::evolution::options::EvolutionOptions,
         rng: &mut crate::rng::RandomNumberGenerator,
     ) -> Result<Vec<Pheno>, Error> {
         let mut children: Vec<Pheno> = Vec::new();
@@ -65,16 +65,18 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        evol_options, phenotype::Phenotype, rng::RandomNumberGenerator, strategy::BreedStrategy,
+        evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
+        strategy::BreedStrategy,
     };
 
+    #[allow(unused)]
     #[test]
     fn test_breed() {
         let mut rng = RandomNumberGenerator::new();
-        let evol_options = evol_options::EvolutionOptions::default();
+        let evol_options = EvolutionOptions::default();
         let strategy = super::OrdinaryStrategy;
 
-        #[derive(Clone, Copy)]
+        #[derive(Clone, Copy, Debug)]
         struct MockPhenotype;
 
         impl Phenotype for MockPhenotype {

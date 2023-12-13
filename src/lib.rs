@@ -1,4 +1,4 @@
-pub mod evol_options;
+pub mod evolution;
 pub mod magnitude;
 pub mod phenotype;
 pub mod rng;

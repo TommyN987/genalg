@@ -11,7 +11,7 @@
 use std::{cell::RefCell, fmt::Error, marker::PhantomData};
 
 use crate::{
-    evol_options::EvolutionOptions, magnitude::Magnitude, phenotype::Phenotype,
+    evolution::options::EvolutionOptions, magnitude::Magnitude, phenotype::Phenotype,
     rng::RandomNumberGenerator,
 };
 
