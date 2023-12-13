@@ -15,8 +15,8 @@ pub struct EvolutionResult<Pheno: Phenotype> {
 pub struct EvolutionLauncher<Pheno, Strategy, Chall>
 where
     Pheno: Phenotype,
-    Strategy: BreedStrategy<Pheno>,
     Chall: Challenge<Pheno>,
+    Strategy: BreedStrategy<Pheno>,
 {
     strategy: Strategy,
     challenge: Chall,
@@ -25,9 +25,9 @@ where
 
 impl<Pheno, Strategy, Chall> EvolutionLauncher<Pheno, Strategy, Chall>
 where
-    Pheno: Phenotype,
-    Strategy: BreedStrategy<Pheno>,
+    Pheno: Phenotype + Challenge<Pheno>,
     Chall: Challenge<Pheno>,
+    Strategy: BreedStrategy<Pheno>,
 {
     pub fn new(strategy: Strategy, challenge: Chall) -> Self {
         Self {

@@ -29,14 +29,14 @@ use super::BreedStrategy;
 /// phenotype satisfies the constraints set up by the `Magnitude` trait.
 pub struct BoundedBreedStrategy<Pheno>
 where
-    Pheno: Phenotype + Magnitude,
+    Pheno: Phenotype + Magnitude<Pheno>,
 {
     _marker: PhantomData<Pheno>,
 }
 
 impl<Pheno> BreedStrategy<Pheno> for BoundedBreedStrategy<Pheno>
 where
-    Pheno: Phenotype + Magnitude,
+    Pheno: Phenotype + Magnitude<Pheno>,
 {
     /// Breeds offspring from a set of parent phenotypes, ensuring the offspring
     /// stays within the specified phenotype bounds.
@@ -90,7 +90,7 @@ where
 
 impl<Pheno> BoundedBreedStrategy<Pheno>
 where
-    Pheno: Phenotype + Magnitude,
+    Pheno: Phenotype + Magnitude<Pheno>,
 {
     /// Develops a phenotype within the specified bounds, ensuring that the resulting
     /// phenotype satisfies the magnitude constraints.
