@@ -7,7 +7,9 @@ pub mod ordinary;
 
 use std::fmt::Error;
 
-use crate::{evol_options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator};
+use crate::{
+    evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
+};
 
 /// # BreedStrategy
 ///

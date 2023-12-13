@@ -69,11 +69,13 @@
 //! }
 //! ```
 
+use std::fmt::Debug;
+
 use crate::rng::RandomNumberGenerator;
 
 pub trait Phenotype
 where
-    Self: Copy + Clone,
+    Self: Copy + Clone + Debug,
 {
     /// Performs crossover with another individual of the same type.
     ///
