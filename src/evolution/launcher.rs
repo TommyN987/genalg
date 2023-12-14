@@ -27,7 +27,7 @@ where
 
 impl<Pheno, Strategy, Chall> EvolutionLauncher<Pheno, Strategy, Chall>
 where
-    Pheno: Phenotype + Challenge<Pheno>,
+    Pheno: Phenotype,
     Chall: Challenge<Pheno>,
     Strategy: BreedStrategy<Pheno>,
 {
