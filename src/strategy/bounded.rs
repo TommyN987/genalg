@@ -39,6 +39,17 @@ where
     _marker: PhantomData<Pheno>,
 }
 
+impl<Pheno> Default for BoundedBreedStrategy<Pheno>
+where
+    Pheno: Phenotype + Magnitude<Pheno>,
+{
+    fn default() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<Pheno> BreedStrategy<Pheno> for BoundedBreedStrategy<Pheno>
 where
     Pheno: Phenotype + Magnitude<Pheno>,
