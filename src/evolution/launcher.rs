@@ -7,13 +7,14 @@ use super::{
 use crate::{phenotype::Phenotype, rng::RandomNumberGenerator, strategy::BreedStrategy};
 
 /// Represents the result of an evolution, containing a phenotype and its associated score.
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct EvolutionResult<Pheno: Phenotype> {
     pub pheno: Pheno,
     pub score: f64,
 }
 
 /// Manages the evolution process using a specified breeding strategy and challenge.
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct EvolutionLauncher<Pheno, Strategy, Chall>
 where
     Pheno: Phenotype,

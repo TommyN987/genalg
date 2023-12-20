@@ -32,6 +32,7 @@ pub trait Magnitude<Pheno: Phenotype> {
 /// However, the `BoundedBreedStrategy` imposes bounds on the phenotypes during evolution.
 /// The algorithm develops a phenotype within the specified bounds, ensuring that the resulting
 /// phenotype satisfies the constraints set up by the `Magnitude` trait.
+#[derive(Debug, Clone)]
 pub struct BoundedBreedStrategy<Pheno>
 where
     Pheno: Phenotype + Magnitude<Pheno>,

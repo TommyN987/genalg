@@ -16,16 +16,16 @@
 //! }
 //! ```
 
-use rand::{rngs::ThreadRng, Rng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::VecDeque;
 pub struct RandomNumberGenerator {
-    pub rng: ThreadRng,
+    pub rng: StdRng,
 }
 
 impl RandomNumberGenerator {
     pub fn new() -> Self {
         Self {
-            rng: rand::thread_rng(),
+            rng: StdRng::from_entropy(),
         }
     }
 
