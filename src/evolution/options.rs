@@ -49,12 +49,14 @@
 //!
 //! Creates a new `EvolutionOptions` instance with default parameters.
 
+#[derive(Debug, Clone)]
 pub enum LogLevel {
     Verbose,
     Minimal,
     None,
 }
 
+#[derive(Debug, Clone)]
 pub struct EvolutionOptions {
     num_generations: usize,
     log_level: LogLevel,

@@ -5,7 +5,7 @@
 pub mod bounded;
 pub mod ordinary;
 
-use std::fmt::Error;
+use std::fmt::{Debug, Error};
 
 use crate::{
     evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
@@ -15,7 +15,10 @@ use crate::{
 ///
 /// The `BreedStrategy` trait defines the interface for strategies responsible for breeding
 /// new individuals (phenotypes) based on a set of parent individuals and evolution options.
-pub trait BreedStrategy<Pheno: Phenotype> {
+pub trait BreedStrategy<Pheno: Phenotype>
+where
+    Self: Debug + Clone,
+{
     /// Breeds new individuals based on a set of parent individuals and evolution options.
     /// The `breed` method is responsible for generating a new population of individuals
     /// based on a set of parent individuals, evolution options, and a random number generator.
