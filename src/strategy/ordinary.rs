@@ -5,7 +5,7 @@
 //! parents are used to create new individuals through crossover and mutation.
 use super::BreedStrategy;
 use crate::phenotype::Phenotype;
-use std::{cell::RefCell, fmt::Error};
+use std::fmt::Error;
 
 /// # OrdinaryStrategy
 ///
@@ -43,18 +43,18 @@ where
         rng: &mut crate::rng::RandomNumberGenerator,
     ) -> Result<Vec<Pheno>, Error> {
         let mut children: Vec<Pheno> = Vec::new();
-        let mut winner_previous_generation = RefCell::new(parents[0]);
-        children.push(*winner_previous_generation.get_mut());
+        let winner_previous_generation = parents[0].clone();
+        children.push(winner_previous_generation.clone());
 
-        parents.iter().skip(1).for_each(|parent| {
-            let mut child = *winner_previous_generation.get_mut();
+        for parent in parents.iter().skip(1) {
+            let mut child = winner_previous_generation.clone();
             child.crossover(parent);
             child.mutate(rng);
             children.push(child);
-        });
+        }
 
         children.extend((parents.len()..evol_options.get_num_offspring()).map(|_| {
-            let mut child = *winner_previous_generation.get_mut();
+            let mut child = winner_previous_generation.clone();
             child.mutate(rng);
             child
         }));

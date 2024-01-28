@@ -8,7 +8,7 @@
 //! However, the `BoundedBreedStrategy` imposes bounds on the phenotypes during evolution.
 //! The algorithm develops a phenotype within the specified bounds, ensuring that the resulting
 //! phenotype satisfies the constraints set up by the `Magnitude` trait.
-use std::{cell::RefCell, fmt::Error, marker::PhantomData};
+use std::{fmt::Error, marker::PhantomData};
 
 use crate::{
     evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
@@ -77,15 +77,15 @@ where
         rng: &mut RandomNumberGenerator,
     ) -> Result<Vec<Pheno>, Error> {
         let mut children: Vec<Pheno> = Vec::new();
-        let mut winner_previous_generation = RefCell::new(parents[0]);
+        let winner_previous_generation = parents[0].clone();
 
-        children.push(self.develop(*winner_previous_generation.get_mut(), rng, false)?);
+        children.push(self.develop(winner_previous_generation.clone(), rng, false)?);
 
         parents
             .iter()
             .skip(1)
             .try_for_each(|parent| -> Result<(), Error> {
-                let mut child = *winner_previous_generation.get_mut();
+                let mut child = winner_previous_generation.clone();
                 child.crossover(parent);
                 let mutated_child = self.develop(child, rng, true)?;
                 children.push(mutated_child);
@@ -94,7 +94,7 @@ where
 
         (parents.len()..evol_options.get_num_offspring()).try_for_each(
             |_| -> Result<(), Error> {
-                let child = *winner_previous_generation.get_mut();
+                let child = winner_previous_generation.clone();
                 let mutated_child = self.develop(child, rng, true)?;
                 children.push(mutated_child);
                 Ok(())

@@ -9,7 +9,7 @@
 //! use genalg::phenotype::Phenotype;
 //! use genalg::rng::RandomNumberGenerator;
 //!
-//! #[derive(Copy, Clone, Debug)]
+//! #[derive(Clone, Debug)]
 //! struct MyPhenotype {
 //!     // ... fields and methods for your specific phenotype ...
 //! }
@@ -51,7 +51,7 @@
 //! use genalg::phenotype::Phenotype;
 //! use genalg::rng::RandomNumberGenerator;
 //!
-//! #[derive(Copy, Clone, Debug)]
+//! #[derive(Clone, Debug)]
 //! struct MyPhenotype {
 //!     // ... fields and methods for your specific phenotype ...
 //! }
@@ -75,7 +75,7 @@ use crate::rng::RandomNumberGenerator;
 
 pub trait Phenotype
 where
-    Self: Copy + Clone + Debug,
+    Self: Clone + Debug,
 {
     /// Performs crossover with another individual of the same type.
     ///
@@ -95,7 +95,7 @@ where
     /// use genalg::phenotype::Phenotype;
     /// use genalg::rng::RandomNumberGenerator;
     ///
-    /// #[derive(Copy, Clone, Debug)]
+    /// #[derive(Clone, Debug)]
     /// struct MyPhenotype {
     ///     // ... fields for your specific phenotype ...
     /// }
@@ -133,7 +133,7 @@ where
     /// use genalg::phenotype::Phenotype;
     /// use genalg::rng::RandomNumberGenerator;
     ///
-    /// #[derive(Copy, Clone, Debug)]
+    /// #[derive(Clone, Debug)]
     /// struct MyPhenotype {
     ///     // ... fields and methods for your specific phenotype ...
     /// }

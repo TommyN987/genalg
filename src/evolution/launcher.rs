@@ -79,7 +79,7 @@ where
             candidates.iter().for_each(|candidate| {
                 let score = self.challenge.score(candidate);
                 fitness.push(EvolutionResult {
-                    pheno: *candidate,
+                    pheno: candidate.clone(),
                     score,
                 })
             });
@@ -101,7 +101,7 @@ where
             fitness
                 .iter()
                 .take(options.get_population_size())
-                .for_each(|fitness_result| parents.push(fitness_result.pheno));
+                .for_each(|fitness_result| parents.push(fitness_result.pheno.clone()));
         }
 
         Ok(fitness[0].clone())
