@@ -56,8 +56,11 @@ fn test_ordinary() {
     let options = EvolutionOptions::default();
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = AdjustStrategy::default();
-    let launcher: EvolutionLauncher<XCoordinate, AdjustStrategy<XCoordinate>, XCoordinateChallenge> =
-        EvolutionLauncher::new(strategy, challenge);
+    let launcher: EvolutionLauncher<
+        XCoordinate,
+        AdjustStrategy<XCoordinate>,
+        XCoordinateChallenge,
+    > = EvolutionLauncher::new(strategy, challenge);
     let winner = launcher.evolve(&options, starting_value, &mut rng).unwrap();
     assert!((winner.pheno.get_x() - 2.0).abs() < 1e-2);
 }
