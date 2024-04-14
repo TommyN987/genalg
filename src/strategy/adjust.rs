@@ -19,14 +19,14 @@ use std::{fmt::Error, marker::PhantomData};
 #[derive(Debug, Clone)]
 pub struct AdjustStrategy<Pheno>
 where
-    Pheno: Phenotype
+    Pheno: Phenotype,
 {
     _marker: PhantomData<Pheno>,
 }
 
 impl<Pheno> Default for AdjustStrategy<Pheno>
 where
-    Pheno: Phenotype
+    Pheno: Phenotype,
 {
     fn default() -> Self {
         Self {
@@ -37,7 +37,7 @@ where
 
 impl<Pheno> BreedStrategy<Pheno> for AdjustStrategy<Pheno>
 where
-    Pheno: Phenotype
+    Pheno: Phenotype,
 {
     /// Breeds offspring from a set of parent phenotypes
     ///
@@ -89,7 +89,8 @@ where
 }
 
 impl<Pheno> AdjustStrategy<Pheno>
-where Pheno: Phenotype
+where
+    Pheno: Phenotype,
 {
     /// Develops a phenotype with consideration of the fitness increase of the previous generation
     ///
