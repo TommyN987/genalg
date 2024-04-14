@@ -2,7 +2,7 @@ use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
-    strategy::OrdinaryStrategy,
+    strategy::AdjustStrategy,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -52,11 +52,11 @@ impl Challenge<XCoordinate> for XCoordinateChallenge {
 #[test]
 fn test_ordinary() {
     let mut rng = RandomNumberGenerator::new();
-    let starting_value = XCoordinate::new(0.0);
+    let starting_value = XCoordinate::new(100000.0);
     let options = EvolutionOptions::default();
     let challenge = XCoordinateChallenge::new(2.0);
-    let strategy = OrdinaryStrategy;
-    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
+    let strategy = AdjustStrategy::default();
+    let launcher: EvolutionLauncher<XCoordinate, AdjustStrategy<XCoordinate>, XCoordinateChallenge> =
         EvolutionLauncher::new(strategy, challenge);
     let winner = launcher.evolve(&options, starting_value, &mut rng).unwrap();
     assert!((winner.pheno.get_x() - 2.0).abs() < 1e-2);
