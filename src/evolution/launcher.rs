@@ -5,10 +5,10 @@ use super::{
     options::{EvolutionOptions, LogLevel},
 };
 use crate::{
-    error::{GeneticError, Result, OptionExt},
-    phenotype::Phenotype, 
-    rng::RandomNumberGenerator, 
-    strategy::BreedStrategy
+    error::{GeneticError, OptionExt, Result},
+    phenotype::Phenotype,
+    rng::RandomNumberGenerator,
+    strategy::BreedStrategy,
 };
 use rayon::prelude::*;
 
@@ -57,7 +57,7 @@ where
             _marker: PhantomData,
         }
     }
-    
+
     /// Evolves a population of phenotypes over multiple generations.
     ///
     /// # Arguments
@@ -68,7 +68,7 @@ where
     ///
     /// # Returns
     ///
-    /// A `Result` containing the best-evolved phenotype and its associated score, 
+    /// A `Result` containing the best-evolved phenotype and its associated score,
     /// or a `GeneticError` if evolution fails.
     ///
     /// # Errors
@@ -109,39 +109,44 @@ where
 
         for generation in 0..options.get_num_generations() {
             candidates.clear();
-            
+
             // Breed new candidates
             match self.strategy.breed(&parents, options, rng) {
                 Ok(bred_candidates) => candidates.extend(bred_candidates),
-                Err(e) => return Err(GeneticError::Breeding(
-                    format!("Failed to breed candidates in generation {}: {}", generation, e)
-                )),
+                Err(e) => {
+                    return Err(GeneticError::Breeding(format!(
+                        "Failed to breed candidates in generation {}: {}",
+                        generation, e
+                    )))
+                }
             }
 
             // Evaluate fitness for each candidate in parallel
             // Only use parallelism if we have enough candidates to make it worthwhile
             let parallel_threshold = 1000; // Threshold for using parallel evaluation
-            
+
             if candidates.len() >= parallel_threshold {
                 // Parallel fitness evaluation
-                let parallel_fitness: Result<Vec<_>> = candidates.par_iter()
+                let parallel_fitness: Result<Vec<_>> = candidates
+                    .par_iter()
                     .map(|candidate| {
                         let score = self.challenge.score(candidate);
-                        
+
                         // Check for invalid fitness scores
                         if !score.is_finite() {
-                            return Err(GeneticError::FitnessCalculation(
-                                format!("Non-finite fitness score encountered: {}", score)
-                            ));
+                            return Err(GeneticError::FitnessCalculation(format!(
+                                "Non-finite fitness score encountered: {}",
+                                score
+                            )));
                         }
-                        
+
                         Ok(EvolutionResult {
                             pheno: candidate.clone(),
                             score,
                         })
                     })
                     .collect();
-                
+
                 // Handle any errors from parallel evaluation
                 fitness = parallel_fitness?;
             } else {
@@ -149,14 +154,15 @@ where
                 fitness.clear();
                 for candidate in &candidates {
                     let score = self.challenge.score(candidate);
-                    
+
                     // Check for invalid fitness scores
                     if !score.is_finite() {
-                        return Err(GeneticError::FitnessCalculation(
-                            format!("Non-finite fitness score encountered: {}", score)
-                        ));
+                        return Err(GeneticError::FitnessCalculation(format!(
+                            "Non-finite fitness score encountered: {}",
+                            score
+                        )));
                     }
-                    
+
                     fitness.push(EvolutionResult {
                         pheno: candidate.clone(),
                         score,
@@ -192,9 +198,10 @@ where
 
             // Ensure we have at least one fitness result
             if fitness.is_empty() {
-                return Err(GeneticError::Evolution(
-                    format!("No viable candidates produced in generation {}", generation)
-                ));
+                return Err(GeneticError::Evolution(format!(
+                    "No viable candidates produced in generation {}",
+                    generation
+                )));
             }
 
             // Select parents for the next generation
@@ -206,8 +213,10 @@ where
         }
 
         // Return the best result
-        fitness.first().cloned().ok_or_else_genetic(|| 
-            GeneticError::Evolution("Evolution completed but no viable candidates were produced".to_string())
-        )
+        fitness.first().cloned().ok_or_else_genetic(|| {
+            GeneticError::Evolution(
+                "Evolution completed but no viable candidates were produced".to_string(),
+            )
+        })
     }
 }

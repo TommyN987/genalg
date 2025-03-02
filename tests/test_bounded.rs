@@ -109,14 +109,14 @@ fn test_bounded_with_invalid_options() {
         BoundedBreedStrategy<XCoordinate>,
         XCoordinateChallenge,
     > = EvolutionLauncher::new(strategy, challenge);
-    
+
     let result = launcher.evolve(&options, starting_value, &mut rng);
     assert!(result.is_err());
-    
+
     match result {
         Err(GeneticError::Configuration(msg)) => {
             assert!(msg.contains("Population size cannot be zero"));
-        },
+        }
         _ => panic!("Expected Configuration error"),
     }
 }

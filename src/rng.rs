@@ -55,7 +55,7 @@ impl ThreadLocalRng {
     {
         thread_rng().gen_range(range)
     }
-    
+
     /// Generates a specified number of random floating-point numbers within the given range.
     ///
     /// # Parameters
@@ -73,7 +73,7 @@ impl ThreadLocalRng {
         uniform_numbers.extend((0..num).map(|_| rng.gen_range(from..to)));
         uniform_numbers
     }
-    
+
     /// Gets a new instance of the thread-local RNG.
     ///
     /// This effectively reseeds the RNG by getting a fresh instance from the system.
@@ -102,7 +102,7 @@ impl RandomNumberGenerator {
             rng: StdRng::from_entropy(),
         }
     }
-    
+
     /// Creates a new `RandomNumberGenerator` instance with a specific seed.
     ///
     /// This is useful for reproducible tests and benchmarks.
@@ -206,30 +206,30 @@ mod tests {
 
         assert!(result.is_empty());
     }
-    
+
     #[test]
     fn test_clone() {
         let mut rng1 = RandomNumberGenerator::from_seed(42);
         let mut rng2 = rng1.clone();
-        
+
         // Both RNGs should generate the same sequence after cloning
         let nums1 = rng1.fetch_uniform(0.0, 1.0, 5);
         let nums2 = rng2.fetch_uniform(0.0, 1.0, 5);
-        
+
         assert_eq!(nums1, nums2);
     }
-    
+
     #[test]
     fn test_thread_local_rng() {
         // Test that the thread-local RNG works
         let result = ThreadLocalRng::fetch_uniform(0.0, 1.0, 5);
-        
+
         assert_eq!(result.len(), 5);
-        
+
         for &num in result.iter() {
             assert!(num >= 0.0 && num < 1.0);
         }
-        
+
         // Test that getting a fresh RNG doesn't panic
         ThreadLocalRng::get_fresh_rng();
     }

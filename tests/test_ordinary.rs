@@ -73,14 +73,14 @@ fn test_ordinary_with_invalid_options() {
     let strategy = OrdinaryStrategy::default();
     let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
         EvolutionLauncher::new(strategy, challenge);
-    
+
     let result = launcher.evolve(&options, starting_value, &mut rng);
     assert!(result.is_err());
-    
+
     match result {
         Err(GeneticError::Configuration(msg)) => {
             assert!(msg.contains("Population size cannot be zero"));
-        },
+        }
         _ => panic!("Expected Configuration error"),
     }
 }
@@ -90,23 +90,26 @@ fn test_ordinary_with_empty_parents() {
     let mut rng = RandomNumberGenerator::new();
     let starting_value = XCoordinate::new(0.0);
     let options = EvolutionOptions::default();
-    
+
     // Create a challenge that will produce an empty population
     struct EmptyChallenge;
-    
+
     impl Challenge<XCoordinate> for EmptyChallenge {
         fn score(&self, _: &XCoordinate) -> f64 {
             // Return a negative score to ensure no candidates are selected
             -1.0
         }
     }
-    
+
     let challenge = EmptyChallenge;
     let strategy = OrdinaryStrategy::default();
     let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, EmptyChallenge> =
         EvolutionLauncher::new(strategy, challenge);
-    
+
     // This should not panic, but return an error
     let result = launcher.evolve(&options, starting_value, &mut rng);
-    assert!(result.is_ok(), "Evolution with empty challenge should succeed");
+    assert!(
+        result.is_ok(),
+        "Evolution with empty challenge should succeed"
+    );
 }

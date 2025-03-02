@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::sync::Mutex;
 
 use genalg::{
@@ -69,13 +69,25 @@ impl Challenge<XCoordinate> for XCoordinateChallenge {
 }
 
 // Sequential fitness evaluation function
-fn evaluate_fitness_sequential(candidates: &[XCoordinate], challenge: &XCoordinateChallenge) -> Vec<f64> {
-    candidates.iter().map(|candidate| challenge.score(candidate)).collect()
+fn evaluate_fitness_sequential(
+    candidates: &[XCoordinate],
+    challenge: &XCoordinateChallenge,
+) -> Vec<f64> {
+    candidates
+        .iter()
+        .map(|candidate| challenge.score(candidate))
+        .collect()
 }
 
 // Parallel fitness evaluation function
-fn evaluate_fitness_parallel(candidates: &[XCoordinate], challenge: &XCoordinateChallenge) -> Vec<f64> {
-    candidates.par_iter().map(|candidate| challenge.score(candidate)).collect()
+fn evaluate_fitness_parallel(
+    candidates: &[XCoordinate],
+    challenge: &XCoordinateChallenge,
+) -> Vec<f64> {
+    candidates
+        .par_iter()
+        .map(|candidate| challenge.score(candidate))
+        .collect()
 }
 
 // Sequential breeding function
@@ -176,13 +188,21 @@ fn bench_fitness_evaluation(c: &mut Criterion) {
     for size in [10, 100, 1000, 10000].iter() {
         let candidates: Vec<XCoordinate> = (0..*size).map(|i| XCoordinate::new(i as f64)).collect();
 
-        group.bench_with_input(BenchmarkId::new("sequential", size), &candidates, |b, candidates| {
-            b.iter(|| evaluate_fitness_sequential(black_box(candidates), black_box(&challenge)))
-        });
+        group.bench_with_input(
+            BenchmarkId::new("sequential", size),
+            &candidates,
+            |b, candidates| {
+                b.iter(|| evaluate_fitness_sequential(black_box(candidates), black_box(&challenge)))
+            },
+        );
 
-        group.bench_with_input(BenchmarkId::new("parallel", size), &candidates, |b, candidates| {
-            b.iter(|| evaluate_fitness_parallel(black_box(candidates), black_box(&challenge)))
-        });
+        group.bench_with_input(
+            BenchmarkId::new("parallel", size),
+            &candidates,
+            |b, candidates| {
+                b.iter(|| evaluate_fitness_parallel(black_box(candidates), black_box(&challenge)))
+            },
+        );
     }
 
     group.finish();
@@ -234,21 +254,24 @@ fn bench_breeding(c: &mut Criterion) {
 
 fn bench_evolution_strategies(c: &mut Criterion) {
     let mut group = c.benchmark_group("evolution_strategies");
-    
+
     // Test with different population sizes
     for size in [50, 500].iter() {
         let starting_value = XCoordinate::new(7.0);
         let rng = RandomNumberGenerator::new();
         let challenge = XCoordinateChallenge::new(2.0);
-        
+
         // Create evolution options with different population sizes
         let evol_options = EvolutionOptions::new(10, LogLevel::None, 5, *size);
-        
+
         // Benchmark OrdinaryStrategy
         let ordinary_strategy = OrdinaryStrategy::default();
-        let ordinary_launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
-            EvolutionLauncher::new(ordinary_strategy, challenge.clone());
-            
+        let ordinary_launcher: EvolutionLauncher<
+            XCoordinate,
+            OrdinaryStrategy,
+            XCoordinateChallenge,
+        > = EvolutionLauncher::new(ordinary_strategy, challenge.clone());
+
         group.bench_with_input(
             BenchmarkId::new("ordinary", size),
             &evol_options,
@@ -264,7 +287,7 @@ fn bench_evolution_strategies(c: &mut Criterion) {
                 })
             },
         );
-        
+
         // Benchmark BoundedBreedStrategy
         let bounded_strategy = BoundedBreedStrategy::default();
         let bounded_launcher: EvolutionLauncher<
@@ -272,7 +295,7 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             BoundedBreedStrategy<XCoordinate>,
             XCoordinateChallenge,
         > = EvolutionLauncher::new(bounded_strategy, challenge.clone());
-            
+
         group.bench_with_input(
             BenchmarkId::new("bounded", size),
             &evol_options,
@@ -289,7 +312,7 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -299,4 +322,4 @@ criterion_group!(
     bench_breeding,
     bench_evolution_strategies
 );
-criterion_main!(benches); 
+criterion_main!(benches);

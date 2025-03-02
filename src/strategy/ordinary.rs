@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use super::BreedStrategy;
 use crate::{
     error::{GeneticError, Result},
-    phenotype::Phenotype
+    phenotype::Phenotype,
 };
 use rayon::prelude::*;
 
@@ -30,7 +30,7 @@ impl OrdinaryStrategy {
             parallel_threshold: 1000,
         }
     }
-    
+
     /// Creates a new `OrdinaryStrategy` instance with a custom parallel threshold.
     ///
     /// # Arguments
@@ -41,9 +41,7 @@ impl OrdinaryStrategy {
     ///
     /// A new `OrdinaryStrategy` instance.
     pub fn new_with_threshold(parallel_threshold: usize) -> Self {
-        Self {
-            parallel_threshold,
-        }
+        Self { parallel_threshold }
     }
 }
 
@@ -97,58 +95,61 @@ where
 
         let winner_previous_generation = parents[0].clone();
         let mut children = Vec::with_capacity(evol_options.get_num_offspring());
-        
+
         // Always include the winner of the previous generation
         children.push(winner_previous_generation.clone());
-        
+
         // Prepare the breeding operations
         let crossover_parents: Vec<&Pheno> = parents.iter().skip(1).collect();
-        let num_mutation_only = evol_options.get_num_offspring().saturating_sub(parents.len());
-        
+        let num_mutation_only = evol_options
+            .get_num_offspring()
+            .saturating_sub(parents.len());
+
         // Determine if we should use parallel processing
         let total_offspring = crossover_parents.len() + num_mutation_only;
-        
+
         if total_offspring >= self.parallel_threshold {
             // Create a thread-safe RNG wrapper
             let rng_mutex = Mutex::new(rng);
-            
+
             // Process crossover parents in parallel
             if !crossover_parents.is_empty() {
-                let crossover_children: Vec<Pheno> = crossover_parents.into_par_iter()
+                let crossover_children: Vec<Pheno> = crossover_parents
+                    .into_par_iter()
                     .map(|parent| {
                         let mut child = winner_previous_generation.clone();
                         child.crossover(parent);
-                        
+
                         // Mutate with a locked RNG
                         {
                             let mut rng_guard = rng_mutex.lock().unwrap();
-                            child.mutate(&mut *rng_guard);
+                            child.mutate(&mut rng_guard);
                         }
-                        
+
                         child
                     })
                     .collect();
-                
+
                 children.extend(crossover_children);
             }
-            
+
             // Process mutation-only children in parallel
             if num_mutation_only > 0 {
                 let mutation_children: Vec<Pheno> = (0..num_mutation_only)
                     .into_par_iter()
                     .map(|_| {
                         let mut child = winner_previous_generation.clone();
-                        
+
                         // Mutate with a locked RNG
                         {
                             let mut rng_guard = rng_mutex.lock().unwrap();
-                            child.mutate(&mut *rng_guard);
+                            child.mutate(&mut rng_guard);
                         }
-                        
+
                         child
                     })
                     .collect();
-                
+
                 children.extend(mutation_children);
             }
         } else {
@@ -160,7 +161,7 @@ where
                 child.mutate(rng);
                 children.push(child);
             }
-            
+
             // Process mutation-only children
             for _ in 0..num_mutation_only {
                 let mut child = winner_previous_generation.clone();
@@ -222,7 +223,7 @@ mod tests {
 
         let result = strategy.breed(&parents, &evol_options, &mut rng);
         assert!(result.is_err());
-        
+
         match result {
             Err(crate::error::GeneticError::EmptyPopulation) => (),
             _ => panic!("Expected EmptyPopulation error"),

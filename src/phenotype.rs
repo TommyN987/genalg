@@ -168,7 +168,7 @@ pub trait Phenotype: Clone + Debug + Send + Sync {
     /// }
     /// ```
     fn mutate(&mut self, rng: &mut RandomNumberGenerator);
-    
+
     /// Performs mutation on the individual using a thread-local random number generator.
     ///
     /// This method is particularly useful in parallel contexts where each thread needs
@@ -176,7 +176,7 @@ pub trait Phenotype: Clone + Debug + Send + Sync {
     /// overhead.
     ///
     /// By default, this method uses the `ThreadLocalRng` to generate random numbers and
-    /// calls the regular `mutate` method with a temporary RNG. You can override this method 
+    /// calls the regular `mutate` method with a temporary RNG. You can override this method
     /// for better performance if your mutation operation can be optimized for thread-local use.
     ///
     /// ## Parameters

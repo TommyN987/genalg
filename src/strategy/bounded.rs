@@ -13,8 +13,8 @@ use std::sync::Mutex;
 
 use crate::{
     error::{GeneticError, Result},
-    evolution::options::EvolutionOptions, 
-    phenotype::Phenotype, 
+    evolution::options::EvolutionOptions,
+    phenotype::Phenotype,
     rng::RandomNumberGenerator,
 };
 use rayon::prelude::*;
@@ -28,13 +28,13 @@ use super::BreedStrategy;
 pub trait Magnitude<Pheno: Phenotype> {
     /// Returns the current magnitude of the phenotype.
     fn magnitude(&self) -> f64;
-    
+
     /// Returns the minimum allowed magnitude for the phenotype.
     fn min_magnitude(&self) -> f64;
-    
+
     /// Returns the maximum allowed magnitude for the phenotype.
     fn max_magnitude(&self) -> f64;
-    
+
     /// Checks if the phenotype's magnitude is within the allowed bounds.
     fn is_within_bounds(&self) -> bool {
         let mag = self.magnitude();
@@ -96,7 +96,7 @@ where
             parallel_threshold: 10,
         }
     }
-    
+
     /// Creates a new `BoundedBreedStrategy` with custom parameters.
     ///
     /// # Arguments
@@ -159,45 +159,46 @@ where
         }
 
         let winner_previous_generation = parents[0].clone();
-        
+
         // Prepare the children to be developed
         let mut children_to_develop: Vec<(Pheno, bool)> = Vec::new();
-        
+
         // Add the winner of the previous generation (no initial mutation)
         children_to_develop.push((winner_previous_generation.clone(), false));
-        
+
         // Create children through crossover with other parents
         for parent in parents.iter().skip(1) {
             let mut child = winner_previous_generation.clone();
             child.crossover(parent);
             children_to_develop.push((child, true));
         }
-        
+
         // Create additional children through mutation only
         for _ in parents.len()..evol_options.get_num_offspring() {
             children_to_develop.push((winner_previous_generation.clone(), true));
         }
-        
+
         // Develop all children (in parallel if there are enough)
         if children_to_develop.len() >= self.parallel_threshold {
             // Create a thread-safe RNG wrapper
             let rng_mutex = Mutex::new(rng);
-            
+
             // Parallel development
-            children_to_develop.into_par_iter()
+            children_to_develop
+                .into_par_iter()
                 .map(|(pheno, initial_mutate)| {
                     let mut rng_guard = rng_mutex.lock().unwrap();
-                    self.develop(pheno, &mut *rng_guard, initial_mutate)
+                    self.develop(pheno, &mut rng_guard, initial_mutate)
                 })
                 .collect()
         } else {
             // Sequential development for small populations
             let mut developed_children = Vec::with_capacity(children_to_develop.len());
-            
+
             for (pheno, initial_mutate) in children_to_develop {
                 developed_children.push(self.develop(pheno, rng, initial_mutate)?);
             }
-            
+
             Ok(developed_children)
         }
     }
@@ -262,11 +263,11 @@ where
         // Try to develop the phenotype within bounds
         for attempt in 1..=self.max_development_attempts {
             phenotype.mutate(rng);
-            
+
             if phenotype.is_within_bounds() {
                 return Ok(phenotype);
             }
-            
+
             // Check for NaN or infinity after mutation
             let mag = phenotype.magnitude();
             if !mag.is_finite() {
@@ -275,7 +276,7 @@ where
                     mag
                 )));
             }
-            
+
             // If we've tried many times without success, log the progress
             if attempt % (self.max_development_attempts / 10) == 0 {
                 // This could be replaced with a proper logging system
@@ -300,9 +301,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        evolution::options::EvolutionOptions,
-        phenotype::Phenotype,
-        rng::RandomNumberGenerator,
+        evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
     };
 
     #[derive(Clone, Copy, Debug)]
@@ -314,7 +313,11 @@ mod tests {
 
     impl TestPhenotype {
         fn new(value: f64, min_bound: f64, max_bound: f64) -> Self {
-            Self { value, min_bound, max_bound }
+            Self {
+                value,
+                min_bound,
+                max_bound,
+            }
         }
     }
 
@@ -348,10 +351,10 @@ mod tests {
         let mut rng = RandomNumberGenerator::new();
         let strategy = BoundedBreedStrategy::default();
         let pheno = TestPhenotype::new(5.0, 4.0, 6.0);
-        
+
         let result = strategy.develop(pheno, &mut rng, false);
         assert!(result.is_ok());
-        
+
         let developed = result.unwrap();
         assert!(developed.magnitude() >= developed.min_magnitude());
         assert!(developed.magnitude() <= developed.max_magnitude());
@@ -364,10 +367,10 @@ mod tests {
         let strategy = BoundedBreedStrategy::new(10);
         // Create a phenotype that's very unlikely to mutate into the valid range
         let pheno = TestPhenotype::new(100.0, 0.0, 0.1);
-        
+
         let result = strategy.develop(pheno, &mut rng, false);
         assert!(result.is_err());
-        
+
         match result {
             Err(GeneticError::MaxAttemptsReached(_)) => (),
             _ => panic!("Expected MaxAttemptsReached error"),
@@ -379,12 +382,12 @@ mod tests {
         let mut rng = RandomNumberGenerator::new();
         let evol_options = EvolutionOptions::default();
         let strategy = BoundedBreedStrategy::<TestPhenotype>::default();
-        
+
         let parents = Vec::<TestPhenotype>::new();
-        
+
         let result = strategy.breed(&parents, &evol_options, &mut rng);
         assert!(result.is_err());
-        
+
         match result {
             Err(GeneticError::EmptyPopulation) => (),
             _ => panic!("Expected EmptyPopulation error"),

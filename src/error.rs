@@ -45,7 +45,7 @@
 //! use genalg::error::{GeneticError, OptionExt};
 //!
 //! fn find_best_candidate(candidates: &[i32]) -> genalg::error::Result<i32> {
-//!     candidates.iter().max().cloned().ok_or_else_genetic(|| 
+//!     candidates.iter().max().cloned().ok_or_else_genetic(||
 //!         GeneticError::EmptyPopulation
 //!     )
 //! }
@@ -66,8 +66,8 @@
 //! }
 //! ```
 
-use std::fmt;
 use std::error::Error as StdError;
+use std::fmt;
 use thiserror::Error;
 
 /// Represents errors that can occur in the genetic algorithm library.
@@ -79,47 +79,47 @@ pub enum GeneticError {
     /// Error that occurs when a breeding operation fails.
     #[error("Breeding error: {0}")]
     Breeding(String),
-    
+
     /// Error that occurs when a phenotype cannot be developed within constraints.
     #[error("Development error: {0}")]
     Development(String),
-    
+
     /// Error that occurs when an evolution process fails.
     #[error("Evolution error: {0}")]
     Evolution(String),
-    
+
     /// Error that occurs when an invalid configuration is provided.
     #[error("Configuration error: {0}")]
     Configuration(String),
-    
+
     /// Error that occurs when an empty population is encountered.
     #[error("Empty population error: Cannot operate on an empty population")]
     EmptyPopulation,
-    
+
     /// Error that occurs when a fitness calculation fails.
     #[error("Fitness calculation error: {0}")]
     FitnessCalculation(String),
-    
+
     /// Error that occurs when a random number generation fails.
     #[error("Random generation error: {0}")]
     RandomGeneration(String),
-    
+
     /// Error that occurs when a phenotype is outside of valid bounds.
     #[error("Bounds error: Phenotype is outside of valid bounds - {0}")]
     OutOfBounds(String),
-    
+
     /// Error that occurs when a maximum number of attempts is reached.
     #[error("Maximum attempts reached: {0}")]
     MaxAttemptsReached(String),
-    
+
     /// Error that occurs when NaN or infinity values are encountered.
     #[error("Invalid numeric value: {0}")]
     InvalidNumericValue(String),
-    
+
     /// Error that occurs when an I/O operation fails.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     /// A generic error with a custom message.
     #[error("{0}")]
     Other(String),
@@ -202,7 +202,7 @@ where
 /// use genalg::error::{GeneticError, OptionExt};
 ///
 /// fn find_best_candidate(candidates: &[i32]) -> genalg::error::Result<i32> {
-///     candidates.iter().max().cloned().ok_or_else_genetic(|| 
+///     candidates.iter().max().cloned().ok_or_else_genetic(||
 ///         GeneticError::EmptyPopulation
 ///     )
 /// }
@@ -261,4 +261,4 @@ impl<T> OptionExt<T> for Option<T> {
 /// ```
 pub fn to_genetic_error<E: StdError>(error: E, context: &str) -> GeneticError {
     GeneticError::Other(format!("{}: {}", context, error))
-} 
+}
