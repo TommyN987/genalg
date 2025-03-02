@@ -1,4 +1,5 @@
 use genalg::{
+    error::GeneticError,
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
@@ -77,4 +78,45 @@ fn test_bounded() {
     > = EvolutionLauncher::new(strategy, challenge);
     let winner = launcher.evolve(&options, starting_value, &mut rng).unwrap();
     assert!((winner.pheno.get_x() - 3.0).abs() < 1e-2);
+}
+
+#[test]
+fn test_bounded_with_custom_attempts() {
+    let mut rng = RandomNumberGenerator::new();
+    let starting_value = XCoordinate::new(7.0);
+    let options = EvolutionOptions::default();
+    let challenge = XCoordinateChallenge::new(2.0);
+    let strategy = BoundedBreedStrategy::new(500); // Use fewer attempts
+    let launcher: EvolutionLauncher<
+        XCoordinate,
+        BoundedBreedStrategy<XCoordinate>,
+        XCoordinateChallenge,
+    > = EvolutionLauncher::new(strategy, challenge);
+    let winner = launcher.evolve(&options, starting_value, &mut rng).unwrap();
+    assert!((winner.pheno.get_x() - 3.0).abs() < 1e-2);
+}
+
+#[test]
+fn test_bounded_with_invalid_options() {
+    let mut rng = RandomNumberGenerator::new();
+    let starting_value = XCoordinate::new(7.0);
+    // Create invalid options with zero population size
+    let options = EvolutionOptions::new(100, genalg::evolution::LogLevel::None, 0, 20);
+    let challenge = XCoordinateChallenge::new(2.0);
+    let strategy = BoundedBreedStrategy::default();
+    let launcher: EvolutionLauncher<
+        XCoordinate,
+        BoundedBreedStrategy<XCoordinate>,
+        XCoordinateChallenge,
+    > = EvolutionLauncher::new(strategy, challenge);
+    
+    let result = launcher.evolve(&options, starting_value, &mut rng);
+    assert!(result.is_err());
+    
+    match result {
+        Err(GeneticError::Configuration(msg)) => {
+            assert!(msg.contains("Population size cannot be zero"));
+        },
+        _ => panic!("Expected Configuration error"),
+    }
 }

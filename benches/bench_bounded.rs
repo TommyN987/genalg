@@ -65,11 +65,10 @@ impl Challenge<XCoordinate> for XCoordinateChallenge {
     }
 }
 
-#[allow(unused)]
 fn bench_bounded(c: &mut Criterion) {
     let starting_value = XCoordinate::new(7.0);
     let mut rng = RandomNumberGenerator::new();
-    let evol_options = EvolutionOptions::new(10000, LogLevel::None, 2, 20);
+    let evol_options = EvolutionOptions::new(100, LogLevel::None, 2, 20);
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = BoundedBreedStrategy::default();
 
@@ -79,13 +78,15 @@ fn bench_bounded(c: &mut Criterion) {
         XCoordinateChallenge,
     > = EvolutionLauncher::new(strategy, challenge);
 
-    c.bench_function("bounded_evolution_10x", |b| {
+    c.bench_function("bounded_evolution", |b| {
         b.iter(|| {
-            launcher.evolve(
+            let result = launcher.evolve(
                 black_box(&evol_options),
                 black_box(starting_value),
                 black_box(&mut rng),
-            )
+            );
+            assert!(result.is_ok());
+            result.unwrap()
         })
     });
 }

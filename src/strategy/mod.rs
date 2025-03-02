@@ -5,10 +5,13 @@
 pub mod bounded;
 pub mod ordinary;
 
-use std::fmt::{Debug, Error};
+use std::fmt::Debug;
 
 use crate::{
-    evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
+    error::Result,
+    evolution::options::EvolutionOptions, 
+    phenotype::Phenotype, 
+    rng::RandomNumberGenerator,
 };
 
 /// # BreedStrategy
@@ -17,7 +20,7 @@ use crate::{
 /// new individuals (phenotypes) based on a set of parent individuals and evolution options.
 pub trait BreedStrategy<Pheno: Phenotype>
 where
-    Self: Debug + Clone,
+    Self: Debug + Clone + Send + Sync,
 {
     /// Breeds new individuals based on a set of parent individuals and evolution options.
     /// The `breed` method is responsible for generating a new population of individuals
@@ -32,13 +35,20 @@ where
     ///
     /// ## Returns
     ///
-    /// A vector containing the newly bred individuals.
+    /// A Result containing a vector of newly bred individuals, or a GeneticError if breeding fails.
+    ///
+    /// ## Errors
+    ///
+    /// This method can fail if:
+    /// - The parents slice is empty
+    /// - The breeding process encounters an error
+    /// - The phenotype development process fails
     fn breed(
         &self,
         parents: &[Pheno],
         evol_options: &EvolutionOptions,
         rng: &mut RandomNumberGenerator,
-    ) -> Result<Vec<Pheno>, Error>;
+    ) -> Result<Vec<Pheno>>;
 }
 
 pub use bounded::{BoundedBreedStrategy, Magnitude};

@@ -1,42 +1,54 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-
 use genalg::{
     evolution::{EvolutionOptions, LogLevel},
+    phenotype::Phenotype,
     rng::RandomNumberGenerator,
     strategy::{BreedStrategy, OrdinaryStrategy},
 };
 
-#[allow(unused)]
 fn bench_ordinary(c: &mut Criterion) {
-    let strategy = OrdinaryStrategy;
-
+    let strategy = OrdinaryStrategy::default();
     let mut rng = RandomNumberGenerator::new();
-    let evol_options = EvolutionOptions::new(10000, LogLevel::Minimal, 2, 20);
 
-    #[derive(Debug, Copy, Clone)]
-    struct MockPhenotype;
+    let mut group = c.benchmark_group("ordinary_breeding");
+    for size in [10, 100, 1000, 10000].iter() {
+        group.bench_function(&format!("ordinary_breeding_{}", size), |b| {
+            b.iter(|| {
+                let options = EvolutionOptions::new(10, LogLevel::None, 5, *size);
+                let parents = vec![
+                    TestPhenotype { value: 1.0 },
+                    TestPhenotype { value: 2.0 },
+                    TestPhenotype { value: 3.0 },
+                    TestPhenotype { value: 4.0 },
+                    TestPhenotype { value: 5.0 },
+                ];
 
-    impl genalg::phenotype::Phenotype for MockPhenotype {
-        fn crossover(&mut self, other: &Self) {}
-        fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
+                let result = strategy.breed(
+                    black_box(&parents),
+                    black_box(&options),
+                    black_box(&mut rng),
+                );
+                assert!(result.is_ok());
+            })
+        });
+    }
+    group.finish();
+}
+
+#[derive(Clone, Debug)]
+struct TestPhenotype {
+    value: f64,
+}
+
+impl Phenotype for TestPhenotype {
+    fn crossover(&mut self, other: &Self) {
+        self.value = (self.value + other.value) / 2.0;
     }
 
-    let mut parents = Vec::<MockPhenotype>::new();
-
-    parents.extend((0..5).into_iter().map(|value| {
-        let child = MockPhenotype;
-        child
-    }));
-
-    c.bench_function("breed", |b| {
-        b.iter(|| {
-            strategy.breed(
-                black_box(&parents),
-                black_box(&evol_options),
-                black_box(&mut rng),
-            )
-        })
-    });
+    fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+        let delta = *rng.fetch_uniform(-1.0, 1.0, 1).front().unwrap() as f64;
+        self.value += delta;
+    }
 }
 
 criterion_group!(benches, bench_ordinary);
