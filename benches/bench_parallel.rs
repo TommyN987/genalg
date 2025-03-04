@@ -81,7 +81,6 @@ impl Challenge<XCoordinate> for XCoordinateChallenge {
     }
 }
 
-// Sequential fitness evaluation function
 fn evaluate_fitness_sequential(
     candidates: &[XCoordinate],
     challenge: &XCoordinateChallenge,
@@ -92,7 +91,6 @@ fn evaluate_fitness_sequential(
         .collect()
 }
 
-// Parallel fitness evaluation function
 fn evaluate_fitness_parallel(
     candidates: &[XCoordinate],
     challenge: &XCoordinateChallenge,
@@ -103,7 +101,6 @@ fn evaluate_fitness_parallel(
         .collect()
 }
 
-// Sequential breeding function
 fn breed_sequential(
     parents: &[XCoordinate],
     winner: &XCoordinate,
@@ -113,7 +110,6 @@ fn breed_sequential(
     let mut children = Vec::with_capacity(num_offspring);
     children.push(winner.clone());
 
-    // Process crossover parents
     for parent in parents.iter().skip(1) {
         let mut child = winner.clone();
         child.crossover(parent);
@@ -121,7 +117,6 @@ fn breed_sequential(
         children.push(child);
     }
 
-    // Process mutation-only children
     let num_mutation_only = num_offspring.saturating_sub(parents.len());
     for _ in 0..num_mutation_only {
         let mut child = winner.clone();
@@ -132,7 +127,6 @@ fn breed_sequential(
     children
 }
 
-// Parallel breeding function
 fn breed_parallel(
     parents: &[XCoordinate],
     winner: &XCoordinate,
@@ -142,11 +136,9 @@ fn breed_parallel(
     let mut children = Vec::with_capacity(num_offspring);
     children.push(winner.clone());
 
-    // Prepare the breeding operations
     let crossover_parents: Vec<&XCoordinate> = parents.iter().skip(1).collect();
     let num_mutation_only = num_offspring.saturating_sub(parents.len());
 
-    // Process crossover parents in parallel
     if !crossover_parents.is_empty() {
         let crossover_children: Vec<XCoordinate> = crossover_parents
             .into_par_iter()
@@ -154,7 +146,6 @@ fn breed_parallel(
                 let mut child = winner.clone();
                 child.crossover(parent);
 
-                // Use thread-local mutation
                 child.mutate_thread_local();
 
                 child
@@ -164,14 +155,12 @@ fn breed_parallel(
         children.extend(crossover_children);
     }
 
-    // Process mutation-only children in parallel
     if num_mutation_only > 0 {
         let mutation_children: Vec<XCoordinate> = (0..num_mutation_only)
             .into_par_iter()
             .map(|_| {
                 let mut child = winner.clone();
 
-                // Use thread-local mutation
                 child.mutate_thread_local();
 
                 child
@@ -188,7 +177,6 @@ fn bench_fitness_evaluation(c: &mut Criterion) {
     let mut group = c.benchmark_group("fitness_evaluation");
     let challenge = XCoordinateChallenge::new(2.0);
 
-    // Test with different population sizes
     for size in [10, 100, 1000, 10000].iter() {
         let candidates: Vec<XCoordinate> = (0..*size).map(|i| XCoordinate::new(i as f64)).collect();
 
@@ -217,7 +205,6 @@ fn bench_breeding(c: &mut Criterion) {
     let mut rng = RandomNumberGenerator::new();
     let winner = XCoordinate::new(5.0);
 
-    // Test with different population sizes
     for size in [10, 100, 1000].iter() {
         let parents: Vec<XCoordinate> = (0..*size).map(|i| XCoordinate::new(i as f64)).collect();
         let num_offspring = *size * 2; // Double the parents for offspring
@@ -259,16 +246,13 @@ fn bench_breeding(c: &mut Criterion) {
 fn bench_evolution_strategies(c: &mut Criterion) {
     let mut group = c.benchmark_group("evolution_strategies");
 
-    // Test with different population sizes
     for size in [50, 500].iter() {
         let starting_value = XCoordinate::new(7.0);
         let rng = RandomNumberGenerator::new();
         let challenge = XCoordinateChallenge::new(2.0);
 
-        // Create evolution options with different population sizes
         let evol_options = EvolutionOptions::new(10, LogLevel::None, 5, *size);
 
-        // Benchmark OrdinaryStrategy
         let ordinary_strategy = OrdinaryStrategy::default();
         let ordinary_launcher: EvolutionLauncher<
             XCoordinate,
@@ -292,7 +276,6 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             },
         );
 
-        // Benchmark BoundedBreedStrategy
         let bounded_strategy = BoundedBreedStrategy::default();
         let bounded_launcher: EvolutionLauncher<
             XCoordinate,

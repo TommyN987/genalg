@@ -58,8 +58,6 @@ where
 {
     _marker: PhantomData<Pheno>,
     max_development_attempts: usize,
-    /// Minimum number of candidates to process in parallel
-    parallel_threshold: usize,
 }
 
 impl<Pheno> Default for BoundedBreedStrategy<Pheno>
@@ -70,7 +68,6 @@ where
         Self {
             _marker: PhantomData,
             max_development_attempts: 1000,
-            parallel_threshold: 1000,
         }
     }
 }
@@ -79,7 +76,7 @@ impl<Pheno> BoundedBreedStrategy<Pheno>
 where
     Pheno: Phenotype + Magnitude<Pheno>,
 {
-    /// Creates a new `BoundedBreedStrategy` with a custom maximum number of development attempts.
+    /// Creates a new `BoundedBreedStrategy` instance with the specified maximum development attempts.
     ///
     /// # Arguments
     ///
@@ -92,25 +89,32 @@ where
         Self {
             _marker: PhantomData,
             max_development_attempts,
-            parallel_threshold: 10,
         }
     }
 
-    /// Creates a new `BoundedBreedStrategy` with custom parameters.
+    /// Creates a new `BoundedBreedStrategy` instance with custom parameters.
+    ///
+    /// # Note
+    ///
+    /// This constructor is maintained for backward compatibility.
+    /// The parallel threshold should now be set in `EvolutionOptions`.
     ///
     /// # Arguments
     ///
     /// * `max_development_attempts` - The maximum number of attempts to develop a phenotype within bounds.
-    /// * `parallel_threshold` - The minimum number of candidates to process in parallel.
+    /// * `parallel_threshold` - This parameter is ignored. Set the threshold in `EvolutionOptions` instead.
     ///
     /// # Returns
     ///
     /// A new `BoundedBreedStrategy` instance.
-    pub fn new_with_params(max_development_attempts: usize, parallel_threshold: usize) -> Self {
+    #[deprecated(
+        since = "0.1.0",
+        note = "Set parallel_threshold in EvolutionOptions instead"
+    )]
+    pub fn new_with_params(max_development_attempts: usize, _parallel_threshold: usize) -> Self {
         Self {
             _marker: PhantomData,
             max_development_attempts,
-            parallel_threshold,
         }
     }
 }
@@ -167,8 +171,8 @@ where
 
         // Create children through crossover with other parents
         for parent in parents.iter().skip(1) {
-            let mut child = winner_previous_generation.clone();
-            child.crossover(parent);
+                let mut child = winner_previous_generation.clone();
+                child.crossover(parent);
             children_to_develop.push((child, true));
         }
 
@@ -178,7 +182,9 @@ where
         }
 
         // Develop all children (in parallel if there are enough)
-        if children_to_develop.len() >= self.parallel_threshold {
+        let parallel_threshold = evol_options.get_parallel_threshold();
+        
+        if children_to_develop.len() >= parallel_threshold {
             // Parallel development
             children_to_develop
                 .into_par_iter()
@@ -257,7 +263,7 @@ where
 
         // Try to develop the phenotype within bounds
         for attempt in 1..=self.max_development_attempts {
-            phenotype.mutate(rng);
+                phenotype.mutate(rng);
 
             if phenotype.is_within_bounds() {
                 return Ok(phenotype);

@@ -20,29 +20,35 @@ use crate::{
 /// parents are used to create new individuals through crossover and mutation.
 #[derive(Debug, Clone)]
 pub struct OrdinaryStrategy {
-    /// Minimum number of candidates to process in parallel
-    parallel_threshold: usize,
+    // No fields needed
 }
 
 impl OrdinaryStrategy {
     /// Creates a new `OrdinaryStrategy` instance.
     pub fn new() -> Self {
-        Self {
-            parallel_threshold: 1000,
-        }
+        Self {}
     }
 
     /// Creates a new `OrdinaryStrategy` instance with a custom parallel threshold.
     ///
+    /// # Note
+    ///
+    /// This constructor is maintained for backward compatibility.
+    /// The parallel threshold should now be set in `EvolutionOptions`.
+    ///
     /// # Arguments
     ///
-    /// * `parallel_threshold` - The minimum number of candidates to process in parallel.
+    /// * `parallel_threshold` - This parameter is ignored. Set the threshold in `EvolutionOptions` instead.
     ///
     /// # Returns
     ///
     /// A new `OrdinaryStrategy` instance.
-    pub fn new_with_threshold(parallel_threshold: usize) -> Self {
-        Self { parallel_threshold }
+    #[deprecated(
+        since = "0.1.0",
+        note = "Set parallel_threshold in EvolutionOptions instead"
+    )]
+    pub fn new_with_threshold(_parallel_threshold: usize) -> Self {
+        Self {}
     }
 }
 
@@ -108,8 +114,9 @@ where
 
         // Determine if we should use parallel processing
         let total_offspring = crossover_parents.len() + num_mutation_only;
+        let parallel_threshold = evol_options.get_parallel_threshold();
 
-        if total_offspring >= self.parallel_threshold {
+        if total_offspring >= parallel_threshold {
             // Process crossover parents in parallel
             if !crossover_parents.is_empty() {
                 let crossover_children: Vec<Pheno> = crossover_parents

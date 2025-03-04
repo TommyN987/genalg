@@ -28,6 +28,7 @@
 //! - `log_level`: The logging level for the algorithm, represented by the `LogLevel` enum.
 //! - `population_size`: The size of the population in each generation.
 //! - `num_offsprings`: The number of offsprings generated in each generation.
+//! - `parallel_threshold`: The minimum number of items to process in parallel.
 //!
 //! ### `LogLevel`
 //!
@@ -44,6 +45,10 @@
 //! ### `EvolutionOptions::new(num_generations: usize, log_level: LogLevel, population_size: usize, num_offsprings: usize) -> Self`
 //!
 //! Creates a new `EvolutionOptions` instance with the specified parameters.
+//!
+//! ### `EvolutionOptions::new_with_threshold(num_generations: usize, log_level: LogLevel, population_size: usize, num_offsprings: usize, parallel_threshold: usize) -> Self`
+//!
+//! Creates a new `EvolutionOptions` instance with all parameters specified.
 //!
 //! ### `EvolutionOptions::default() -> Self`
 //!
@@ -62,6 +67,8 @@ pub struct EvolutionOptions {
     log_level: LogLevel,
     population_size: usize,
     num_offsprings: usize,
+    /// Minimum number of items to process in parallel
+    parallel_threshold: usize,
 }
 
 impl EvolutionOptions {
@@ -76,6 +83,32 @@ impl EvolutionOptions {
             log_level,
             population_size,
             num_offsprings,
+            parallel_threshold: 1000, // Default parallel threshold
+        }
+    }
+
+    /// Creates a new `EvolutionOptions` instance with all parameters specified.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_generations` - The number of generations for the evolutionary algorithm.
+    /// * `log_level` - The logging level for the algorithm.
+    /// * `population_size` - The size of the population in each generation.
+    /// * `num_offsprings` - The number of offsprings generated in each generation.
+    /// * `parallel_threshold` - The minimum number of items to process in parallel.
+    pub fn new_with_threshold(
+        num_generations: usize,
+        log_level: LogLevel,
+        population_size: usize,
+        num_offsprings: usize,
+        parallel_threshold: usize,
+    ) -> Self {
+        Self {
+            num_generations,
+            log_level,
+            population_size,
+            num_offsprings,
+            parallel_threshold,
         }
     }
 
@@ -94,6 +127,16 @@ impl EvolutionOptions {
     pub fn get_num_offspring(&self) -> usize {
         self.num_offsprings
     }
+
+    /// Returns the minimum number of items to process in parallel.
+    pub fn get_parallel_threshold(&self) -> usize {
+        self.parallel_threshold
+    }
+
+    /// Sets the minimum number of items to process in parallel.
+    pub fn set_parallel_threshold(&mut self, threshold: usize) {
+        self.parallel_threshold = threshold;
+    }
 }
 
 impl Default for EvolutionOptions {
@@ -103,6 +146,7 @@ impl Default for EvolutionOptions {
             log_level: LogLevel::None,
             population_size: 2,
             num_offsprings: 20,
+            parallel_threshold: 1000, // Default parallel threshold
         }
     }
 }

@@ -90,7 +90,6 @@ where
         starting_value: Pheno,
         rng: &mut RandomNumberGenerator,
     ) -> Result<EvolutionResult<Pheno>> {
-        // Validate evolution options
         if options.get_population_size() == 0 {
             return Err(GeneticError::Configuration(
                 "Population size cannot be zero".to_string(),
@@ -110,7 +109,6 @@ where
         for generation in 0..options.get_num_generations() {
             candidates.clear();
 
-            // Breed new candidates
             match self.strategy.breed(&parents, options, rng) {
                 Ok(bred_candidates) => candidates.extend(bred_candidates),
                 Err(e) => {
@@ -121,9 +119,8 @@ where
                 }
             }
 
-            // Evaluate fitness for each candidate in parallel
             // Only use parallelism if we have enough candidates to make it worthwhile
-            let parallel_threshold = 1000; // Threshold for using parallel evaluation
+            let parallel_threshold = options.get_parallel_threshold();
 
             if candidates.len() >= parallel_threshold {
                 // Parallel fitness evaluation
