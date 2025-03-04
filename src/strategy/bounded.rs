@@ -8,8 +8,7 @@
 //! However, the `BoundedBreedStrategy` imposes bounds on the phenotypes during evolution.
 //! The algorithm develops a phenotype within the specified bounds, ensuring that the resulting
 //! phenotype satisfies the constraints set up by the `Magnitude` trait.
-use std::marker::PhantomData;
-use std::sync::Mutex;
+use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{
     error::{GeneticError, Result},
@@ -180,15 +179,11 @@ where
 
         // Develop all children (in parallel if there are enough)
         if children_to_develop.len() >= self.parallel_threshold {
-            // Create a thread-safe RNG wrapper
-            let rng_mutex = Mutex::new(rng);
-
             // Parallel development
             children_to_develop
                 .into_par_iter()
                 .map(|(pheno, initial_mutate)| {
-                    let mut rng_guard = rng_mutex.lock().unwrap();
-                    self.develop(pheno, &mut rng_guard, initial_mutate)
+                    self.develop_thread_local(pheno, initial_mutate)
                 })
                 .collect()
         } else {
@@ -263,6 +258,92 @@ where
         // Try to develop the phenotype within bounds
         for attempt in 1..=self.max_development_attempts {
             phenotype.mutate(rng);
+
+            if phenotype.is_within_bounds() {
+                return Ok(phenotype);
+            }
+
+            // Check for NaN or infinity after mutation
+            let mag = phenotype.magnitude();
+            if !mag.is_finite() {
+                return Err(GeneticError::InvalidNumericValue(format!(
+                    "Phenotype magnitude became non-finite during development: {}",
+                    mag
+                )));
+            }
+
+            // If we've tried many times without success, log the progress
+            if attempt % (self.max_development_attempts / 10) == 0 {
+                // This could be replaced with a proper logging system
+                // println!("Development attempt {}/{}: current magnitude = {}, bounds = [{}, {}]",
+                //     attempt, self.max_development_attempts, phenotype.magnitude(),
+                //     phenotype.min_magnitude(), phenotype.max_magnitude());
+            }
+        }
+
+        // If we've exhausted all attempts, return an error
+        Err(GeneticError::MaxAttemptsReached(format!(
+            "Failed to develop phenotype within bounds after {} attempts. Current magnitude: {}, min: {}, max: {}",
+            self.max_development_attempts,
+            phenotype.magnitude(),
+            phenotype.min_magnitude(),
+            phenotype.max_magnitude()
+        )))
+    }
+
+    /// Develops a phenotype within the specified bounds, ensuring that the resulting
+    /// phenotype satisfies the magnitude constraints.
+    ///
+    /// # Arguments
+    ///
+    /// * `pheno` - The initial phenotype to be developed.
+    /// * `initial_mutate` - A flag indicating whether to apply initial mutation.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the developed phenotype or a `GeneticError` if development fails.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if:
+    /// - The phenotype cannot be developed within the specified bounds after the maximum number of attempts
+    /// - The phenotype's magnitude is not a finite number
+    ///
+    /// # Details
+    ///
+    /// This method attempts to develop a phenotype within the specified magnitude bounds.
+    /// If `initial_mutate` is true, an initial mutation is applied to the input phenotype.
+    /// The development process involves repeated mutation attempts until a phenotype
+    /// within the specified bounds is achieved. If after the maximum number of attempts,
+    /// a valid phenotype is not obtained, an error is returned.
+    fn develop_thread_local(
+        &self,
+        pheno: Pheno,
+        initial_mutate: bool,
+    ) -> Result<Pheno> {
+        let mut phenotype = pheno;
+
+        if initial_mutate {
+            phenotype.mutate_thread_local();
+        }
+
+        // Check if the initial phenotype is already within bounds
+        if phenotype.is_within_bounds() {
+            return Ok(phenotype);
+        }
+
+        // Check if the magnitude is a valid number
+        let mag = phenotype.magnitude();
+        if !mag.is_finite() {
+            return Err(GeneticError::InvalidNumericValue(format!(
+                "Phenotype magnitude is not a finite number: {}",
+                mag
+            )));
+        }
+
+        // Try to develop the phenotype within bounds
+        for attempt in 1..=self.max_development_attempts {
+            phenotype.mutate_thread_local();
 
             if phenotype.is_within_bounds() {
                 return Ok(phenotype);

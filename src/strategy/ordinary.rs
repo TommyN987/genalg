@@ -3,14 +3,15 @@
 //! The `OrdinaryStrategy` struct represents a basic breeding strategy where the first
 //! parent is considered as the winner of the previous generation, and the remaining
 //! parents are used to create new individuals through crossover and mutation.
-use std::sync::Mutex;
+use std::fmt::Debug;
+
+use rayon::prelude::*;
 
 use super::BreedStrategy;
 use crate::{
     error::{GeneticError, Result},
     phenotype::Phenotype,
 };
-use rayon::prelude::*;
 
 /// # OrdinaryStrategy
 ///
@@ -109,9 +110,6 @@ where
         let total_offspring = crossover_parents.len() + num_mutation_only;
 
         if total_offspring >= self.parallel_threshold {
-            // Create a thread-safe RNG wrapper
-            let rng_mutex = Mutex::new(rng);
-
             // Process crossover parents in parallel
             if !crossover_parents.is_empty() {
                 let crossover_children: Vec<Pheno> = crossover_parents
@@ -120,11 +118,7 @@ where
                         let mut child = winner_previous_generation.clone();
                         child.crossover(parent);
 
-                        // Mutate with a locked RNG
-                        {
-                            let mut rng_guard = rng_mutex.lock().unwrap();
-                            child.mutate(&mut rng_guard);
-                        }
+                        child.mutate_thread_local();
 
                         child
                     })
@@ -139,12 +133,7 @@ where
                     .into_par_iter()
                     .map(|_| {
                         let mut child = winner_previous_generation.clone();
-
-                        // Mutate with a locked RNG
-                        {
-                            let mut rng_guard = rng_mutex.lock().unwrap();
-                            child.mutate(&mut rng_guard);
-                        }
+                        child.mutate_thread_local();
 
                         child
                     })

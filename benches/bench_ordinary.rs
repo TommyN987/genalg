@@ -49,6 +49,12 @@ impl Phenotype for TestPhenotype {
         let delta = *rng.fetch_uniform(-1.0, 1.0, 1).front().unwrap() as f64;
         self.value += delta;
     }
+    
+    fn mutate_thread_local(&mut self) {
+        use genalg::rng::ThreadLocalRng;
+        let delta = ThreadLocalRng::gen_range(-1.0..1.0);
+        self.value += delta;
+    }
 }
 
 criterion_group!(benches, bench_ordinary);

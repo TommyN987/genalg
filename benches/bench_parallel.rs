@@ -1,5 +1,4 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::sync::Mutex;
 
 use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
@@ -33,6 +32,12 @@ impl Phenotype for XCoordinate {
         let delta = *rng.fetch_uniform(-100.0, 100.0, 1).front().unwrap() as f64;
         self.x += delta / 100.0;
     }
+
+    fn mutate_thread_local(&mut self) {
+        use genalg::rng::ThreadLocalRng;
+        let delta = ThreadLocalRng::gen_range(-100.0..100.0);
+        self.x += delta / 100.0;
+    }
 }
 
 impl Magnitude<XCoordinate> for XCoordinate {
@@ -49,9 +54,17 @@ impl Magnitude<XCoordinate> for XCoordinate {
     }
 }
 
-#[derive(Clone)]
-struct XCoordinateChallenge {
+#[derive(Debug)]
+pub struct XCoordinateChallenge {
     target: f64,
+}
+
+impl Clone for XCoordinateChallenge {
+    fn clone(&self) -> Self {
+        Self {
+            target: self.target
+        }
+    }
 }
 
 impl XCoordinateChallenge {
@@ -124,13 +137,10 @@ fn breed_parallel(
     parents: &[XCoordinate],
     winner: &XCoordinate,
     num_offspring: usize,
-    rng: &mut RandomNumberGenerator,
+    _rng: &mut RandomNumberGenerator, // Not used directly anymore
 ) -> Vec<XCoordinate> {
     let mut children = Vec::with_capacity(num_offspring);
     children.push(winner.clone());
-
-    // Create a thread-safe RNG wrapper
-    let rng_mutex = Mutex::new(rng);
 
     // Prepare the breeding operations
     let crossover_parents: Vec<&XCoordinate> = parents.iter().skip(1).collect();
@@ -144,11 +154,8 @@ fn breed_parallel(
                 let mut child = winner.clone();
                 child.crossover(parent);
 
-                // Mutate with a locked RNG
-                {
-                    let mut rng_guard = rng_mutex.lock().unwrap();
-                    child.mutate(&mut *rng_guard);
-                }
+                // Use thread-local mutation
+                child.mutate_thread_local();
 
                 child
             })
@@ -164,11 +171,8 @@ fn breed_parallel(
             .map(|_| {
                 let mut child = winner.clone();
 
-                // Mutate with a locked RNG
-                {
-                    let mut rng_guard = rng_mutex.lock().unwrap();
-                    child.mutate(&mut *rng_guard);
-                }
+                // Use thread-local mutation
+                child.mutate_thread_local();
 
                 child
             })
