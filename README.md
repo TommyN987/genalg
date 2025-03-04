@@ -206,6 +206,118 @@ impl Magnitude<MyPhenotype> for MyPhenotype {
 let strategy = BoundedBreedStrategy::new(1000); // 1000 max development attempts
 ```
 
+### Implementing Custom Breeding Strategies
+
+One of the key design features of GenAlg is the ability to implement your own custom breeding strategies. This allows you to tailor the evolutionary process to your specific problem domain.
+
+To create a custom breeding strategy, implement the `BreedStrategy` trait:
+
+```rust
+use genalg::{
+    error::Result,
+    evolution::options::EvolutionOptions,
+    phenotype::Phenotype,
+    rng::RandomNumberGenerator,
+    strategy::BreedStrategy,
+};
+
+#[derive(Debug, Clone)]
+struct MyCustomStrategy {
+    // Your strategy configuration fields
+    crossover_rate: f64,
+    mutation_rate: f64,
+}
+
+impl MyCustomStrategy {
+    pub fn new(crossover_rate: f64, mutation_rate: f64) -> Self {
+        Self { crossover_rate, mutation_rate }
+    }
+}
+
+impl<Pheno: Phenotype> BreedStrategy<Pheno> for MyCustomStrategy {
+    fn breed(
+        &self,
+        parents: &[Pheno],
+        evol_options: &EvolutionOptions,
+        rng: &mut RandomNumberGenerator,
+    ) -> Result<Vec<Pheno>> {
+        // Implement your custom breeding logic here
+        // This could include:
+        // - Selection mechanisms (tournament, roulette wheel, etc.)
+        // - Custom crossover operations
+        // - Specialized mutation rates
+        // - Elitism strategies
+        // - Adaptive parameter adjustments
+        
+        // Example implementation (simplified):
+        let mut children = Vec::with_capacity(evol_options.get_num_offspring());
+        
+        if parents.is_empty() {
+            return Err(GeneticError::EmptyPopulation);
+        }
+        
+        // Use the first parent as a template
+        let template = &parents[0];
+        
+        // Generate offspring
+        for _ in 0..evol_options.get_num_offspring() {
+            // Select parents using your custom selection method
+            let parent1 = select_parent(parents, rng);
+            let parent2 = select_parent(parents, rng);
+            
+            // Create child from parent1
+            let mut child = parent1.clone();
+            
+            // Apply crossover with some probability
+            if rng.fetch_uniform(0.0, 1.0, 1).front().unwrap() < &(self.crossover_rate as f32) {
+                child.crossover(&parent2);
+            }
+            
+            // Apply mutation with some probability
+            if rng.fetch_uniform(0.0, 1.0, 1).front().unwrap() < &(self.mutation_rate as f32) {
+                child.mutate(rng);
+            }
+            
+            children.push(child);
+        }
+        
+        Ok(children)
+    }
+}
+
+// Helper function for parent selection
+fn select_parent<Pheno: Phenotype>(parents: &[Pheno], rng: &mut RandomNumberGenerator) -> &Pheno {
+    // Simple random selection for this example
+    let idx = (rng.fetch_uniform(0.0, parents.len() as f32, 1).front().unwrap() 
+               * parents.len() as f32) as usize;
+    &parents[idx % parents.len()]
+}
+```
+
+Once you've implemented your custom strategy, you can use it with the `EvolutionLauncher` just like the built-in strategies:
+
+```rust
+// Create your custom strategy
+let strategy = MyCustomStrategy::new(0.8, 0.2);
+
+// Create the launcher with your strategy
+let launcher = EvolutionLauncher::new(strategy, challenge);
+
+// Configure and run the evolution
+let result = launcher
+    .configure(options, starting_value)
+    .run()
+    .unwrap();
+```
+
+This flexibility allows you to implement specialized breeding approaches such as:
+
+- **Island Models**: Evolve multiple sub-populations with occasional migration
+- **Age-Based Selection**: Consider the age of individuals in the selection process
+- **Niching Methods**: Maintain diversity by promoting solutions in different regions
+- **Adaptive Parameter Control**: Dynamically adjust mutation and crossover rates
+- **Multi-objective Optimization**: Handle multiple competing objectives
+
 ### Parallel Processing
 
 GenAlg automatically uses parallel processing for fitness evaluation and breeding when the population size exceeds the parallel threshold. Configure this in your `EvolutionOptions`:
