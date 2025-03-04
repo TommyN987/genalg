@@ -49,5 +49,5 @@ where
     ) -> Result<Vec<Pheno>>;
 }
 
-pub use bounded::{BoundedBreedStrategy, Magnitude};
+pub use bounded::{BoundedBreedConfig, BoundedBreedConfigBuilder, BoundedBreedStrategy, Magnitude};
 pub use ordinary::OrdinaryStrategy;

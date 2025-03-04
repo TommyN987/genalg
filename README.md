@@ -49,8 +49,17 @@ impl Phenotype for MyPhenotype {
 
     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
         // Implement mutation (e.g., adding random noise)
-        let delta = rng.fetch_uniform(-1.0, 1.0, 1).front().unwrap();
+        let values = rng.fetch_uniform(-1.0, 1.0, 1);
+        let delta = values.front().unwrap();
         self.value += *delta as f64 / 10.0;
+    }
+    
+    // Optional: Override for better performance in parallel contexts
+    fn mutate_thread_local(&mut self) {
+        // Custom implementation using thread-local RNG
+        use genalg::rng::ThreadLocalRng;
+        let delta = ThreadLocalRng::gen_range(-0.1..0.1);
+        self.value += delta;
     }
 }
 
@@ -68,15 +77,24 @@ impl Challenge<MyPhenotype> for MyChallenge {
 
 fn main() {
     // Initialize components
-    let mut rng = RandomNumberGenerator::new();
     let starting_value = MyPhenotype { value: 0.0 };
-    let options = EvolutionOptions::default();
+    let options = EvolutionOptions::builder()
+        .num_generations(100)
+        .log_level(LogLevel::Minimal)
+        .population_size(10)
+        .num_offspring(50)
+        .parallel_threshold(1000)
+        .build();
     let challenge = MyChallenge { target: 42.0 };
     let strategy = OrdinaryStrategy::default();
     
     // Create and run the evolution
     let launcher = EvolutionLauncher::new(strategy, challenge);
-    let result = launcher.evolve(&options, starting_value, &mut rng).unwrap();
+    let result = launcher
+        .configure(options, starting_value)
+        .with_seed(42)  // Optional: Set a specific seed
+        .run()
+        .unwrap();
     
     println!("Best solution: {:?}, Fitness: {}", result.pheno, result.score);
 }

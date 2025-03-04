@@ -103,7 +103,7 @@
 //! 
 //! ```rust
 //! use genalg::{
-//!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
+//!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //!     phenotype::Phenotype,
 //!     rng::RandomNumberGenerator,
 //!     strategy::OrdinaryStrategy,
@@ -130,15 +130,23 @@
 //! # }
 //! 
 //! // Initialize components
-//! let mut rng = RandomNumberGenerator::new();
 //! let starting_value = MyPhenotype { value: 0.0 };
-//! let options = EvolutionOptions::default();
+//! let options = EvolutionOptions::builder()
+//!     .num_generations(100)
+//!     .log_level(LogLevel::Minimal)
+//!     .population_size(10)
+//!     .num_offspring(50)
+//!     .build();
 //! let challenge = MyChallenge { target: 42.0 };
 //! let strategy = OrdinaryStrategy::default();
 //! 
 //! // Create and run the evolution
 //! let launcher = EvolutionLauncher::new(strategy, challenge);
-//! let result = launcher.evolve(&options, starting_value, &mut rng).unwrap();
+//! let result = launcher
+//!     .configure(options, starting_value)
+//!     .with_seed(42)  // Optional: Set a specific seed
+//!     .run()
+//!     .unwrap();
 //! 
 //! println!("Best solution: {:?}, Fitness: {}", result.pheno, result.score);
 //! ```
@@ -167,8 +175,18 @@
 //! ```rust
 //! use genalg::evolution::options::{EvolutionOptions, LogLevel};
 //! 
+//! // Using the builder pattern
+//! let options = EvolutionOptions::builder()
+//!     .num_generations(100)
+//!     .log_level(LogLevel::Minimal)
+//!     .population_size(10)
+//!     .num_offspring(50)
+//!     .parallel_threshold(500) // Use parallel processing when population >= 500
+//!     .build();
+//! 
+//! // Or using setter methods
 //! let mut options = EvolutionOptions::default();
-//! options.set_parallel_threshold(500); // Use parallel processing when population >= 500
+//! options.set_parallel_threshold(500);
 //! ```
 //! 
 //! ## Error Handling

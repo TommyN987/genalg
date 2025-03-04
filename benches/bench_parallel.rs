@@ -265,12 +265,10 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             &evol_options,
             |b, options| {
                 b.iter(|| {
-                    let mut rng_clone = rng.clone();
-                    let result = ordinary_launcher.evolve(
-                        black_box(options),
-                        black_box(starting_value),
-                        black_box(&mut rng_clone),
-                    );
+                    let result = ordinary_launcher
+                        .configure(black_box(*options), black_box(starting_value))
+                        .with_seed(42)
+                        .run();
                     assert!(result.is_ok());
                 })
             },
@@ -288,12 +286,10 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             &evol_options,
             |b, options| {
                 b.iter(|| {
-                    let mut rng_clone = rng.clone();
-                    let result = bounded_launcher.evolve(
-                        black_box(options),
-                        black_box(starting_value),
-                        black_box(&mut rng_clone),
-                    );
+                    let result = bounded_launcher
+                        .configure(black_box(*options), black_box(starting_value))
+                        .with_seed(42)
+                        .run();
                     assert!(result.is_ok());
                 })
             },

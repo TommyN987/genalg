@@ -1,6 +1,6 @@
 use genalg::{
     error::GeneticError,
-    evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
+    evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     strategy::OrdinaryStrategy,
@@ -52,20 +52,21 @@ impl Challenge<XCoordinate> for XCoordinateChallenge {
 
 #[test]
 fn test_ordinary() {
-    let mut rng = RandomNumberGenerator::new();
     let starting_value = XCoordinate::new(0.0);
     let options = EvolutionOptions::default();
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = OrdinaryStrategy::default();
     let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
         EvolutionLauncher::new(strategy, challenge);
-    let winner = launcher.evolve(&options, starting_value, &mut rng).unwrap();
+    let winner = launcher
+        .configure(options, starting_value)
+        .run()
+        .unwrap();
     assert!((winner.pheno.get_x() - 2.0).abs() < 1e-2);
 }
 
 #[test]
 fn test_ordinary_with_invalid_options() {
-    let mut rng = RandomNumberGenerator::new();
     let starting_value = XCoordinate::new(0.0);
     // Create invalid options with zero population size
     let options = EvolutionOptions::new(100, genalg::evolution::LogLevel::None, 0, 20);
@@ -74,7 +75,9 @@ fn test_ordinary_with_invalid_options() {
     let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
         EvolutionLauncher::new(strategy, challenge);
 
-    let result = launcher.evolve(&options, starting_value, &mut rng);
+    let result = launcher
+        .configure(options, starting_value)
+        .run();
     assert!(result.is_err());
 
     match result {
@@ -87,7 +90,6 @@ fn test_ordinary_with_invalid_options() {
 
 #[test]
 fn test_ordinary_with_empty_parents() {
-    let mut rng = RandomNumberGenerator::new();
     let starting_value = XCoordinate::new(0.0);
     let options = EvolutionOptions::default();
 
@@ -107,9 +109,57 @@ fn test_ordinary_with_empty_parents() {
         EvolutionLauncher::new(strategy, challenge);
 
     // This should not panic, but return an error
-    let result = launcher.evolve(&options, starting_value, &mut rng);
+    let result = launcher
+        .configure(options, starting_value)
+        .run();
     assert!(
         result.is_ok(),
         "Evolution with empty challenge should succeed"
     );
+}
+
+#[test]
+fn test_ordinary_strategy() {
+    let starting_value = XCoordinate::new(0.0);
+    let options = EvolutionOptions::new(100, LogLevel::None, 10, 50);
+    let challenge = XCoordinateChallenge::new(2.0);
+    let strategy = OrdinaryStrategy::default();
+    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
+        EvolutionLauncher::new(strategy, challenge);
+    let winner = launcher
+        .configure(options, starting_value)
+        .with_seed(42)
+        .run()
+        .unwrap();
+    assert!((winner.pheno.get_x() - 2.0).abs() < 1e-2);
+}
+
+#[test]
+fn test_ordinary_strategy_error() {
+    let starting_value = XCoordinate::new(0.0);
+    let options = EvolutionOptions::new(100, LogLevel::None, 0, 50);
+    let challenge = XCoordinateChallenge::new(2.0);
+    let strategy = OrdinaryStrategy::default();
+    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
+        EvolutionLauncher::new(strategy, challenge);
+    let result = launcher
+        .configure(options, starting_value)
+        .with_seed(42)
+        .run();
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_ordinary_strategy_error_offspring() {
+    let starting_value = XCoordinate::new(0.0);
+    let options = EvolutionOptions::new(100, LogLevel::None, 10, 0);
+    let challenge = XCoordinateChallenge::new(2.0);
+    let strategy = OrdinaryStrategy::default();
+    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
+        EvolutionLauncher::new(strategy, challenge);
+    let result = launcher
+        .configure(options, starting_value)
+        .with_seed(42)
+        .run();
+    assert!(result.is_err());
 }

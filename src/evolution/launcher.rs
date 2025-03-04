@@ -58,7 +58,66 @@ where
         }
     }
 
+    /// Configures the evolution process with the provided options and starting value.
+    ///
+    /// This method returns an `EvolutionProcess` that can be further configured
+    /// before running the evolution.
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Evolution options controlling the evolution process.
+    /// * `starting_value` - The initial phenotype from which evolution begins.
+    ///
+    /// # Returns
+    ///
+    /// An `EvolutionProcess` that can be used to run the evolution.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use genalg::{
+    /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
+    /// #     phenotype::Phenotype,
+    /// #     rng::RandomNumberGenerator,
+    /// #     strategy::OrdinaryStrategy,
+    /// # };
+    /// # #[derive(Clone, Debug)]
+    /// # struct MyPhenotype { value: f64 }
+    /// # impl Phenotype for MyPhenotype {
+    /// #     fn crossover(&mut self, other: &Self) { self.value = (self.value + other.value) / 2.0; }
+    /// #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) { 
+    /// #         let values = rng.fetch_uniform(-0.1, 0.1, 1);
+    /// #         let delta = values.front().unwrap();
+    /// #         self.value += *delta as f64; 
+    /// #     }
+    /// # }
+    /// # struct MyChallenge { target: f64 }
+    /// # impl Challenge<MyPhenotype> for MyChallenge {
+    /// #     fn score(&self, phenotype: &MyPhenotype) -> f64 { 1.0 / (phenotype.value - self.target).abs().max(0.001) }
+    /// # }
+    /// # let strategy = OrdinaryStrategy::default();
+    /// # let challenge = MyChallenge { target: 42.0 };
+    /// # let options = EvolutionOptions::default();
+    /// # let starting_value = MyPhenotype { value: 0.0 };
+    /// let launcher = EvolutionLauncher::new(strategy, challenge);
+    /// let result = launcher
+    ///     .configure(options, starting_value)
+    ///     .with_seed(42)  // Optional: Set a specific seed
+    ///     .run();
+    /// ```
+    pub fn configure(&self, options: EvolutionOptions, starting_value: Pheno) -> EvolutionProcess<'_, Pheno, Strategy, Chall> {
+        EvolutionProcess {
+            launcher: self,
+            options,
+            starting_value,
+            seed: None,
+        }
+    }
+
     /// Evolves a population of phenotypes over multiple generations.
+    ///
+    /// This is an internal method used by `EvolutionProcess::run()`.
+    /// For public use, use the `configure()` method instead.
     ///
     /// # Arguments
     ///
@@ -70,21 +129,7 @@ where
     ///
     /// A `Result` containing the best-evolved phenotype and its associated score,
     /// or a `GeneticError` if evolution fails.
-    ///
-    /// # Errors
-    ///
-    /// This method will return an error if:
-    /// - The population size in options is zero
-    /// - The number of offspring in options is zero
-    /// - The breeding process fails
-    /// - No viable candidates are produced in any generation
-    ///
-    /// # Performance
-    ///
-    /// This method uses parallel processing for fitness evaluation when the population
-    /// size is large enough to benefit from parallelism. The fitness of each candidate
-    /// is evaluated in parallel using Rayon's parallel iterator.
-    pub fn evolve(
+    fn evolve(
         &self,
         options: &EvolutionOptions,
         starting_value: Pheno,
@@ -115,7 +160,7 @@ where
                     return Err(GeneticError::Breeding(format!(
                         "Failed to breed candidates in generation {}: {}",
                         generation, e
-                    )))
+                    )));
                 }
             }
 
@@ -215,5 +260,74 @@ where
                 "Evolution completed but no viable candidates were produced".to_string(),
             )
         })
+    }
+}
+
+/// Represents a configured evolution process that can be run.
+///
+/// This struct is created by the `configure` method on `EvolutionLauncher`
+/// and provides a fluent interface for running the evolution process.
+pub struct EvolutionProcess<'a, Pheno, Strategy, Chall>
+where
+    Pheno: Phenotype,
+    Chall: Challenge<Pheno>,
+    Strategy: BreedStrategy<Pheno>,
+{
+    launcher: &'a EvolutionLauncher<Pheno, Strategy, Chall>,
+    options: EvolutionOptions,
+    starting_value: Pheno,
+    seed: Option<u64>,
+}
+
+impl<'a, Pheno, Strategy, Chall> EvolutionProcess<'a, Pheno, Strategy, Chall>
+where
+    Pheno: Phenotype + Send + Sync,
+    Chall: Challenge<Pheno> + Send + Sync,
+    Strategy: BreedStrategy<Pheno>,
+{
+    /// Sets a specific seed for the random number generator.
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - The seed value for the random number generator.
+    ///
+    /// # Returns
+    ///
+    /// The `EvolutionProcess` with the seed configured.
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+
+    /// Runs the evolution process.
+    ///
+    /// This is the main entry point for executing the evolution after configuration.
+    /// It internally calls the private `evolve` method on the launcher.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the best-evolved phenotype and its associated score,
+    /// or a `GeneticError` if evolution fails.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if:
+    /// - The population size in options is zero
+    /// - The number of offspring in options is zero
+    /// - The breeding process fails
+    /// - No viable candidates are produced in any generation
+    ///
+    /// # Performance
+    ///
+    /// This method uses parallel processing for fitness evaluation when the population
+    /// size is large enough to benefit from parallelism. The fitness of each candidate
+    /// is evaluated in parallel using Rayon's parallel iterator.
+    pub fn run(self) -> Result<EvolutionResult<Pheno>> {
+        let mut rng = match self.seed {
+            Some(seed) => RandomNumberGenerator::from_seed(seed),
+            None => RandomNumberGenerator::new(),
+        };
+
+        self.launcher.evolve(&self.options, self.starting_value, &mut rng)
     }
 }

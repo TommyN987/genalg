@@ -41,6 +41,71 @@ pub trait Magnitude<Pheno: Phenotype> {
     }
 }
 
+/// Configuration for the `BoundedBreedStrategy`.
+///
+/// This struct holds the configuration parameters for the `BoundedBreedStrategy`.
+#[derive(Debug, Clone)]
+pub struct BoundedBreedConfig {
+    /// The maximum number of attempts to develop a phenotype within bounds.
+    pub max_development_attempts: usize,
+}
+
+impl Default for BoundedBreedConfig {
+    fn default() -> Self {
+        Self {
+            max_development_attempts: 1000,
+        }
+    }
+}
+
+/// Builder for `BoundedBreedConfig`.
+///
+/// Provides a fluent interface for constructing `BoundedBreedConfig` instances.
+#[derive(Debug, Clone)]
+pub struct BoundedBreedConfigBuilder {
+    max_development_attempts: Option<usize>,
+}
+
+impl Default for BoundedBreedConfigBuilder {
+    fn default() -> Self {
+        Self {
+            max_development_attempts: None,
+        }
+    }
+}
+
+impl BoundedBreedConfigBuilder {
+    /// Sets the maximum number of development attempts.
+    pub fn max_development_attempts(mut self, value: usize) -> Self {
+        self.max_development_attempts = Some(value);
+        self
+    }
+
+    /// Builds the `BoundedBreedConfig` instance.
+    pub fn build(self) -> BoundedBreedConfig {
+        BoundedBreedConfig {
+            max_development_attempts: self.max_development_attempts.unwrap_or(1000),
+        }
+    }
+}
+
+impl BoundedBreedConfig {
+    /// Returns a builder for creating a `BoundedBreedConfig` instance.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use genalg::strategy::{BoundedBreedConfig, BoundedBreedConfigBuilder};
+    ///
+    /// let config = BoundedBreedConfig::builder()
+    ///     .max_development_attempts(2000)
+    ///     .build();
+    /// ```
+    pub fn builder() -> BoundedBreedConfigBuilder {
+        BoundedBreedConfigBuilder::default()
+    }
+}
+
 /// # BoundedBreedStrategy
 ///
 /// Similarly to `OrdinaryStrategy`, the `BoundedBreedStrategy` struct represents
@@ -57,7 +122,7 @@ where
     Pheno: Phenotype + Magnitude<Pheno>,
 {
     _marker: PhantomData<Pheno>,
-    max_development_attempts: usize,
+    config: BoundedBreedConfig,
 }
 
 impl<Pheno> Default for BoundedBreedStrategy<Pheno>
@@ -67,7 +132,7 @@ where
     fn default() -> Self {
         Self {
             _marker: PhantomData,
-            max_development_attempts: 1000,
+            config: BoundedBreedConfig::default(),
         }
     }
 }
@@ -88,7 +153,70 @@ where
     pub fn new(max_development_attempts: usize) -> Self {
         Self {
             _marker: PhantomData,
-            max_development_attempts,
+            config: BoundedBreedConfig {
+                max_development_attempts,
+            },
+        }
+    }
+
+    /// Creates a new `BoundedBreedStrategy` instance with the specified configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The configuration for the strategy.
+    ///
+    /// # Returns
+    ///
+    /// A new `BoundedBreedStrategy` instance.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use genalg::strategy::{BoundedBreedStrategy, BoundedBreedConfig, Magnitude};
+    /// use genalg::phenotype::Phenotype;
+    /// use genalg::rng::RandomNumberGenerator;
+    ///
+    /// #[derive(Clone, Debug)]
+    /// struct MyPhenotype {
+    ///     value: f64,
+    /// }
+    ///
+    /// impl Phenotype for MyPhenotype {
+    ///     fn crossover(&mut self, other: &Self) {
+    ///         self.value = (self.value + other.value) / 2.0;
+    ///     }
+    ///
+    ///     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+    ///         let values = rng.fetch_uniform(-0.1, 0.1, 1);
+    ///         let delta = values.front().unwrap();
+    ///         self.value += *delta as f64;
+    ///     }
+    /// }
+    ///
+    /// impl Magnitude<MyPhenotype> for MyPhenotype {
+    ///     fn magnitude(&self) -> f64 {
+    ///         self.value.abs()
+    ///     }
+    ///
+    ///     fn min_magnitude(&self) -> f64 {
+    ///         0.0
+    ///     }
+    ///
+    ///     fn max_magnitude(&self) -> f64 {
+    ///         100.0
+    ///     }
+    /// }
+    ///
+    /// let config = BoundedBreedConfig::builder()
+    ///     .max_development_attempts(2000)
+    ///     .build();
+    ///
+    /// let strategy = BoundedBreedStrategy::<MyPhenotype>::with_config(config);
+    /// ```
+    pub fn with_config(config: BoundedBreedConfig) -> Self {
+        Self {
+            _marker: PhantomData,
+            config,
         }
     }
 
@@ -112,10 +240,7 @@ where
         note = "Set parallel_threshold in EvolutionOptions instead"
     )]
     pub fn new_with_params(max_development_attempts: usize, _parallel_threshold: usize) -> Self {
-        Self {
-            _marker: PhantomData,
-            max_development_attempts,
-        }
+        Self::new(max_development_attempts)
     }
 }
 
@@ -262,7 +387,7 @@ where
         }
 
         // Try to develop the phenotype within bounds
-        for attempt in 1..=self.max_development_attempts {
+        for attempt in 1..=self.config.max_development_attempts {
                 phenotype.mutate(rng);
 
             if phenotype.is_within_bounds() {
@@ -279,7 +404,7 @@ where
             }
 
             // If we've tried many times without success, log the progress
-            if attempt % (self.max_development_attempts / 10) == 0 {
+            if attempt % (self.config.max_development_attempts / 10) == 0 {
                 // This could be replaced with a proper logging system
                 // println!("Development attempt {}/{}: current magnitude = {}, bounds = [{}, {}]",
                 //     attempt, self.max_development_attempts, phenotype.magnitude(),
@@ -290,7 +415,7 @@ where
         // If we've exhausted all attempts, return an error
         Err(GeneticError::MaxAttemptsReached(format!(
             "Failed to develop phenotype within bounds after {} attempts. Current magnitude: {}, min: {}, max: {}",
-            self.max_development_attempts,
+            self.config.max_development_attempts,
             phenotype.magnitude(),
             phenotype.min_magnitude(),
             phenotype.max_magnitude()
@@ -348,7 +473,7 @@ where
         }
 
         // Try to develop the phenotype within bounds
-        for attempt in 1..=self.max_development_attempts {
+        for attempt in 1..=self.config.max_development_attempts {
             phenotype.mutate_thread_local();
 
             if phenotype.is_within_bounds() {
@@ -365,7 +490,7 @@ where
             }
 
             // If we've tried many times without success, log the progress
-            if attempt % (self.max_development_attempts / 10) == 0 {
+            if attempt % (self.config.max_development_attempts / 10) == 0 {
                 // This could be replaced with a proper logging system
                 // println!("Development attempt {}/{}: current magnitude = {}, bounds = [{}, {}]",
                 //     attempt, self.max_development_attempts, phenotype.magnitude(),
@@ -376,7 +501,7 @@ where
         // If we've exhausted all attempts, return an error
         Err(GeneticError::MaxAttemptsReached(format!(
             "Failed to develop phenotype within bounds after {} attempts. Current magnitude: {}, min: {}, max: {}",
-            self.max_development_attempts,
+            self.config.max_development_attempts,
             phenotype.magnitude(),
             phenotype.min_magnitude(),
             phenotype.max_magnitude()
