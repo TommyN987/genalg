@@ -62,7 +62,7 @@ pub struct XCoordinateChallenge {
 impl Clone for XCoordinateChallenge {
     fn clone(&self) -> Self {
         Self {
-            target: self.target
+            target: self.target,
         }
     }
 }

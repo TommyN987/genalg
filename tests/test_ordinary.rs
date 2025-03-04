@@ -58,10 +58,7 @@ fn test_ordinary() {
     let strategy = OrdinaryStrategy::default();
     let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
         EvolutionLauncher::new(strategy, challenge);
-    let winner = launcher
-        .configure(options, starting_value)
-        .run()
-        .unwrap();
+    let winner = launcher.configure(options, starting_value).run().unwrap();
     assert!((winner.pheno.get_x() - 2.0).abs() < 1e-2);
 }
 
@@ -75,9 +72,7 @@ fn test_ordinary_with_invalid_options() {
     let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
         EvolutionLauncher::new(strategy, challenge);
 
-    let result = launcher
-        .configure(options, starting_value)
-        .run();
+    let result = launcher.configure(options, starting_value).run();
     assert!(result.is_err());
 
     match result {
@@ -109,9 +104,7 @@ fn test_ordinary_with_empty_parents() {
         EvolutionLauncher::new(strategy, challenge);
 
     // This should not panic, but return an error
-    let result = launcher
-        .configure(options, starting_value)
-        .run();
+    let result = launcher.configure(options, starting_value).run();
     assert!(
         result.is_ok(),
         "Evolution with empty challenge should succeed"

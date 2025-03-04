@@ -85,10 +85,10 @@ where
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) { self.value = (self.value + other.value) / 2.0; }
-    /// #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) { 
+    /// #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
     /// #         let values = rng.fetch_uniform(-0.1, 0.1, 1);
     /// #         let delta = values.front().unwrap();
-    /// #         self.value += *delta as f64; 
+    /// #         self.value += *delta as f64;
     /// #     }
     /// # }
     /// # struct MyChallenge { target: f64 }
@@ -105,7 +105,11 @@ where
     ///     .with_seed(42)  // Optional: Set a specific seed
     ///     .run();
     /// ```
-    pub fn configure(&self, options: EvolutionOptions, starting_value: Pheno) -> EvolutionProcess<'_, Pheno, Strategy, Chall> {
+    pub fn configure(
+        &self,
+        options: EvolutionOptions,
+        starting_value: Pheno,
+    ) -> EvolutionProcess<'_, Pheno, Strategy, Chall> {
         EvolutionProcess {
             launcher: self,
             options,
@@ -329,6 +333,7 @@ where
             None => RandomNumberGenerator::new(),
         };
 
-        self.launcher.evolve(&self.options, self.starting_value, &mut rng)
+        self.launcher
+            .evolve(&self.options, self.starting_value, &mut rng)
     }
 }

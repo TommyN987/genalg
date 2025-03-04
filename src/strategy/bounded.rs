@@ -61,12 +61,10 @@ impl Default for BoundedBreedConfig {
 /// Builder for `BoundedBreedConfig`.
 ///
 /// Provides a fluent interface for constructing `BoundedBreedConfig` instances.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct BoundedBreedConfigBuilder {
     max_development_attempts: Option<usize>,
 }
-
 
 impl BoundedBreedConfigBuilder {
     /// Sets the maximum number of development attempts.
@@ -290,8 +288,8 @@ where
 
         // Create children through crossover with other parents
         for parent in parents.iter().skip(1) {
-                let mut child = winner_previous_generation.clone();
-                child.crossover(parent);
+            let mut child = winner_previous_generation.clone();
+            child.crossover(parent);
             children_to_develop.push((child, true));
         }
 
@@ -302,14 +300,12 @@ where
 
         // Develop all children (in parallel if there are enough)
         let parallel_threshold = evol_options.get_parallel_threshold();
-        
+
         if children_to_develop.len() >= parallel_threshold {
             // Parallel development
             children_to_develop
                 .into_par_iter()
-                .map(|(pheno, initial_mutate)| {
-                    self.develop_thread_local(pheno, initial_mutate)
-                })
+                .map(|(pheno, initial_mutate)| self.develop_thread_local(pheno, initial_mutate))
                 .collect()
         } else {
             // Sequential development for small populations
@@ -382,7 +378,7 @@ where
 
         // Try to develop the phenotype within bounds
         for attempt in 1..=self.config.max_development_attempts {
-                phenotype.mutate(rng);
+            phenotype.mutate(rng);
 
             if phenotype.is_within_bounds() {
                 return Ok(phenotype);
@@ -441,11 +437,7 @@ where
     /// The development process involves repeated mutation attempts until a phenotype
     /// within the specified bounds is achieved. If after the maximum number of attempts,
     /// a valid phenotype is not obtained, an error is returned.
-    fn develop_thread_local(
-        &self,
-        pheno: Pheno,
-        initial_mutate: bool,
-    ) -> Result<Pheno> {
+    fn develop_thread_local(&self, pheno: Pheno, initial_mutate: bool) -> Result<Pheno> {
         let mut phenotype = pheno;
 
         if initial_mutate {

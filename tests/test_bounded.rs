@@ -75,10 +75,7 @@ fn test_bounded() {
         BoundedBreedStrategy<XCoordinate>,
         XCoordinateChallenge,
     > = EvolutionLauncher::new(strategy, challenge);
-    let winner = launcher
-        .configure(options, starting_value)
-        .run()
-        .unwrap();
+    let winner = launcher.configure(options, starting_value).run().unwrap();
     assert!((winner.pheno.get_x() - 3.0).abs() < 1e-2);
 }
 
@@ -93,10 +90,7 @@ fn test_bounded_with_custom_attempts() {
         BoundedBreedStrategy<XCoordinate>,
         XCoordinateChallenge,
     > = EvolutionLauncher::new(strategy, challenge);
-    let winner = launcher
-        .configure(options, starting_value)
-        .run()
-        .unwrap();
+    let winner = launcher.configure(options, starting_value).run().unwrap();
     assert!((winner.pheno.get_x() - 3.0).abs() < 1e-2);
 }
 
@@ -113,9 +107,7 @@ fn test_bounded_with_invalid_options() {
         XCoordinateChallenge,
     > = EvolutionLauncher::new(strategy, challenge);
 
-    let result = launcher
-        .configure(options, starting_value)
-        .run();
+    let result = launcher.configure(options, starting_value).run();
     assert!(result.is_err());
 
     match result {
