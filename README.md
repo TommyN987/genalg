@@ -292,27 +292,10 @@ cargo bench
 cargo bench --bench bench_parallel
 ```
 
-## Benchmarking
-
-GenAlg includes benchmarks to measure performance:
-
-```bash
-# Run all benchmarks
-cargo bench
-
-# Run specific benchmark
-cargo bench --bench bench_parallel
-```
-
 ## License
 
-This project is licensed under either of:
-
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-
-at your option.
+This project is licensed under the [MIT license](http://opensource.org/licenses/MIT)
 
 ### Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions. 
+Contributions are welcome! Please open an issue or submit a pull request.
