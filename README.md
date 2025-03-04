@@ -14,6 +14,16 @@ GenAlg is a modern, thread-safe genetic algorithm framework designed for flexibi
 - **Extensible**: Easy to implement custom phenotypes, fitness functions, and breeding strategies
 - **Parallel Processing**: Automatic parallelization for large populations using Rayon
 
+## API Stability
+
+GenAlg is currently at version 0.1.0, which indicates that the API is still evolving. While we strive to maintain backward compatibility, breaking changes may occur in minor version updates until we reach version 1.0.0. After reaching 1.0.0, we will follow semantic versioning principles:
+
+- **Major version** changes (1.0.0 → 2.0.0) may include breaking API changes
+- **Minor version** changes (1.0.0 → 1.1.0) will be backward compatible but may add new functionality
+- **Patch version** changes (1.0.0 → 1.0.1) will include bug fixes and performance improvements
+
+We recommend pinning to a specific version in your `Cargo.toml` if API stability is critical for your project.
+
 ## Installation
 
 Add GenAlg to your `Cargo.toml`:
@@ -256,13 +266,31 @@ fn my_function() -> Result<()> {
 
 ## Performance Optimization Tips
 
-1. **Implement `mutate_thread_local()`** for your phenotypes to avoid mutex overhead in parallel processing.
+1. **Implement `mutate_thread_local()`** for your phenotypes to avoid mutex overhead in parallel processing. This can provide significant performance improvements for large populations.
 
-2. **Tune the parallel threshold** in `EvolutionOptions` based on your specific problem and hardware.
+2. **Tune the parallel threshold** in `EvolutionOptions` based on your specific problem and hardware. The optimal threshold depends on:
+   - CPU core count and performance
+   - Memory bandwidth
+   - Complexity of your fitness function and mutation operations
+   - Size of your phenotype data structures
 
 3. **Use efficient data structures** in your phenotype implementation to minimize memory usage and improve cache locality.
 
 4. **Profile your fitness function** as it's often the performance bottleneck in genetic algorithms.
+
+5. **Consider strategy selection** based on your problem characteristics:
+   - `OrdinaryStrategy` generally performs better for very large populations
+   - `BoundedBreedStrategy` adds constraints but may have higher overhead for certain problems
+
+6. **Benchmark your specific use case** to find the optimal configuration. Use the built-in benchmarks as a starting point:
+
+```bash
+# Run all benchmarks
+cargo bench
+
+# Run specific benchmark
+cargo bench --bench bench_parallel
+```
 
 ## Benchmarking
 
@@ -278,4 +306,13 @@ cargo bench --bench bench_parallel
 
 ## License
 
-This project is licensed under [LICENSE_NAME] - see the LICENSE file for details. 
+This project is licensed under either of:
+
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions. 

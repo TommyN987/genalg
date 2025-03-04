@@ -2,6 +2,13 @@
 name = "genalg"
 version = "0.1.0"
 edition = "2021"
+authors = ["Tommy Nagy"]
+description = "A flexible, high-performance genetic algorithm library written in Rust"
+repository = "https://github.com/TommyN987/genalg"
+license = "MIT"
+keywords = ["genetic", "algorithm", "optimization", "evolutionary", "parallel"]
+categories = ["algorithms", "science"]
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

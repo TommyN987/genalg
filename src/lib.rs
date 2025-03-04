@@ -189,6 +189,20 @@
 //! options.set_parallel_threshold(500);
 //! ```
 //! 
+//! ### Performance Characteristics
+//! 
+//! GenAlg is optimized for parallel processing with larger populations:
+//! 
+//! - **Parallel operations** show significant performance improvements for larger populations
+//! - **Thread-local RNG** eliminates mutex contention in parallel contexts
+//! - **Automatic parallelization** occurs when population size exceeds the parallel threshold
+//! - **Optimal threshold** depends on your specific hardware and problem complexity
+//! 
+//! For best performance:
+//! - Use `mutate_thread_local()` in your phenotype implementations
+//! - Set an appropriate parallel threshold based on your hardware
+//! - Consider using the `OrdinaryStrategy` for very large populations
+//! 
 //! ## Error Handling
 //! 
 //! GenAlg provides a comprehensive error handling system through the [`error`] module:
@@ -236,7 +250,12 @@ pub mod rng;
 pub mod strategy;
 
 // Re-export commonly used types for convenience
-pub use error::Result;
-pub use evolution::{Challenge, EvolutionLauncher, EvolutionOptions, EvolutionResult};
+pub use error::{GeneticError, Result, ResultExt, OptionExt};
+pub use evolution::{Challenge, EvolutionLauncher, EvolutionOptions, EvolutionResult, LogLevel};
 pub use phenotype::Phenotype;
-pub use strategy::{bounded::BoundedBreedStrategy, ordinary::OrdinaryStrategy, BreedStrategy};
+pub use rng::ThreadLocalRng;
+pub use strategy::{
+    bounded::{BoundedBreedStrategy, BoundedBreedConfig, Magnitude},
+    ordinary::OrdinaryStrategy,
+    BreedStrategy,
+};

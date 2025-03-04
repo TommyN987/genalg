@@ -267,6 +267,7 @@ where
 ///
 /// This struct is created by the `configure` method on `EvolutionLauncher`
 /// and provides a fluent interface for running the evolution process.
+/// It is not meant to be constructed directly by users.
 pub struct EvolutionProcess<'a, Pheno, Strategy, Chall>
 where
     Pheno: Phenotype,

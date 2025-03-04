@@ -65,6 +65,102 @@
 //!     Ok(contents)
 //! }
 //! ```
+//!
+//! ## Comprehensive Error Handling Example
+//!
+//! Here's a more comprehensive example showing how to handle various error scenarios
+//! in a genetic algorithm application:
+//!
+//! ```rust
+//! use genalg::{
+//!     error::{GeneticError, Result, ResultExt, OptionExt},
+//!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
+//!     phenotype::Phenotype,
+//!     strategy::OrdinaryStrategy,
+//! };
+//! use std::fs::File;
+//! use std::io::{self, Read};
+//!
+//! // Custom phenotype and challenge implementations omitted for brevity
+//! # #[derive(Clone, Debug)]
+//! # struct MyPhenotype { value: f64 }
+//! # impl Phenotype for MyPhenotype {
+//! #     fn crossover(&mut self, other: &Self) { self.value = (self.value + other.value) / 2.0; }
+//! #     fn mutate(&mut self, _rng: &mut genalg::rng::RandomNumberGenerator) { }
+//! # }
+//! # struct MyChallenge { target: f64 }
+//! # impl Challenge<MyPhenotype> for MyChallenge {
+//! #     fn score(&self, phenotype: &MyPhenotype) -> f64 { 1.0 / (phenotype.value - self.target).abs().max(0.001) }
+//! # }
+//!
+//! fn load_initial_phenotype(path: &str) -> Result<MyPhenotype> {
+//!     // Handle IO errors with context
+//!     let mut file = File::open(path)
+//!         .context(format!("Failed to open initial phenotype file: {}", path))?;
+//!     
+//!     let mut contents = String::new();
+//!     file.read_to_string(&mut contents)
+//!         .context("Failed to read phenotype data")?;
+//!     
+//!     // Parse the value, handling potential format errors
+//!     let value = contents.trim().parse::<f64>()
+//!         .map_err(|e| GeneticError::Other(format!("Invalid phenotype value: {}", e)))?;
+//!     
+//!     // Validate the value
+//!     if !value.is_finite() {
+//!         return Err(GeneticError::InvalidNumericValue(
+//!             "Initial phenotype value must be finite".to_string()
+//!         ));
+//!     }
+//!     
+//!     Ok(MyPhenotype { value })
+//! }
+//!
+//! fn run_evolution(config_path: &str, phenotype_path: &str) -> Result<()> {
+//!     // Load the initial phenotype, propagating any errors
+//!     let starting_value = load_initial_phenotype(phenotype_path)?;
+//!     
+//!     // Create evolution components
+//!     let options = EvolutionOptions::builder()
+//!         .num_generations(100)
+//!         .log_level(LogLevel::Minimal)
+//!         .population_size(10)
+//!         .num_offspring(50)
+//!         .build();
+//!     
+//!     // Validate configuration
+//!     if options.get_population_size() == 0 {
+//!         return Err(GeneticError::Configuration(
+//!             "Population size cannot be zero".to_string()
+//!         ));
+//!     }
+//!     
+//!     let challenge = MyChallenge { target: 42.0 };
+//!     let strategy = OrdinaryStrategy::default();
+//!     
+//!     // Run the evolution, handling potential errors
+//!     let launcher = EvolutionLauncher::new(strategy, challenge);
+//!     let result = launcher
+//!         .configure(options, starting_value)
+//!         .run()?;
+//!     
+//!     println!("Evolution successful! Best fitness: {}", result.score);
+//!     Ok(())
+//! }
+//!
+//! fn main() {
+//!     match run_evolution("config.txt", "phenotype.txt") {
+//!         Ok(_) => println!("Evolution completed successfully"),
+//!         Err(e) => match e {
+//!             GeneticError::Configuration(msg) => eprintln!("Configuration error: {}", msg),
+//!             GeneticError::EmptyPopulation => eprintln!("Error: Empty population"),
+//!             GeneticError::InvalidNumericValue(msg) => eprintln!("Numeric error: {}", msg),
+//!             GeneticError::Io(io_err) => eprintln!("I/O error: {}", io_err),
+//!             _ => eprintln!("Unexpected error: {}", e),
+//!         }
+//!     }
+//! }
+//! ```
 
 use std::error::Error as StdError;
 use std::fmt;
