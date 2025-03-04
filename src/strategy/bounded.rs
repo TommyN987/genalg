@@ -62,17 +62,11 @@ impl Default for BoundedBreedConfig {
 ///
 /// Provides a fluent interface for constructing `BoundedBreedConfig` instances.
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct BoundedBreedConfigBuilder {
     max_development_attempts: Option<usize>,
 }
 
-impl Default for BoundedBreedConfigBuilder {
-    fn default() -> Self {
-        Self {
-            max_development_attempts: None,
-        }
-    }
-}
 
 impl BoundedBreedConfigBuilder {
     /// Sets the maximum number of development attempts.

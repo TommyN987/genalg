@@ -197,6 +197,7 @@ impl Default for EvolutionOptions {
 ///
 /// Provides a fluent interface for constructing `EvolutionOptions` instances.
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct EvolutionOptionsBuilder {
     num_generations: Option<usize>,
     log_level: Option<LogLevel>,
@@ -205,17 +206,6 @@ pub struct EvolutionOptionsBuilder {
     parallel_threshold: Option<usize>,
 }
 
-impl Default for EvolutionOptionsBuilder {
-    fn default() -> Self {
-        Self {
-            num_generations: None,
-            log_level: None,
-            population_size: None,
-            num_offsprings: None,
-            parallel_threshold: None,
-        }
-    }
-}
 
 impl EvolutionOptionsBuilder {
     /// Sets the number of generations.

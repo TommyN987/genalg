@@ -67,7 +67,6 @@ impl Challenge<XCoordinate> for XCoordinateChallenge {
 
 fn bench_bounded(c: &mut Criterion) {
     let starting_value = XCoordinate::new(7.0);
-    let mut rng = RandomNumberGenerator::new();
     let evol_options = EvolutionOptions::new(100, LogLevel::None, 2, 20);
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = BoundedBreedStrategy::default();
@@ -80,11 +79,10 @@ fn bench_bounded(c: &mut Criterion) {
 
     c.bench_function("bounded_evolution", |b| {
         b.iter(|| {
-            let result = launcher.evolve(
-                black_box(&evol_options),
-                black_box(starting_value),
-                black_box(&mut rng),
-            );
+            let result = launcher
+                .configure(black_box(evol_options.clone()), black_box(starting_value))
+                .with_seed(42)
+                .run();
             assert!(result.is_ok());
             result.unwrap()
         })

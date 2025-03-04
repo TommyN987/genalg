@@ -279,7 +279,7 @@ where
     seed: Option<u64>,
 }
 
-impl<'a, Pheno, Strategy, Chall> EvolutionProcess<'a, Pheno, Strategy, Chall>
+impl<Pheno, Strategy, Chall> EvolutionProcess<'_, Pheno, Strategy, Chall>
 where
     Pheno: Phenotype + Send + Sync,
     Chall: Challenge<Pheno> + Send + Sync,

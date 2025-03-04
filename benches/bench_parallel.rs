@@ -244,14 +244,13 @@ fn bench_breeding(c: &mut Criterion) {
 }
 
 fn bench_evolution_strategies(c: &mut Criterion) {
+    let sizes = [50, 500];
     let mut group = c.benchmark_group("evolution_strategies");
 
-    for size in [50, 500].iter() {
-        let starting_value = XCoordinate::new(7.0);
-        let rng = RandomNumberGenerator::new();
+    for size in sizes.iter() {
+        let starting_value = XCoordinate::new(5.0);
+        let evol_options = EvolutionOptions::new(10, LogLevel::None, 10, *size);
         let challenge = XCoordinateChallenge::new(2.0);
-
-        let evol_options = EvolutionOptions::new(10, LogLevel::None, 5, *size);
 
         let ordinary_strategy = OrdinaryStrategy::default();
         let ordinary_launcher: EvolutionLauncher<
@@ -266,7 +265,7 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             |b, options| {
                 b.iter(|| {
                     let result = ordinary_launcher
-                        .configure(black_box(*options), black_box(starting_value))
+                        .configure(black_box(options.clone()), black_box(starting_value))
                         .with_seed(42)
                         .run();
                     assert!(result.is_ok());
@@ -287,7 +286,7 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             |b, options| {
                 b.iter(|| {
                     let result = bounded_launcher
-                        .configure(black_box(*options), black_box(starting_value))
+                        .configure(black_box(options.clone()), black_box(starting_value))
                         .with_seed(42)
                         .run();
                     assert!(result.is_ok());
