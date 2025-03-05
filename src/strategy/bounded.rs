@@ -308,7 +308,9 @@ where
             // Parallel development
             children_to_develop
                 .into_par_iter()
-                .map(|(pheno, initial_mutate)| self.develop_thread_local(pheno, initial_mutate, log_level))
+                .map(|(pheno, initial_mutate)| {
+                    self.develop_thread_local(pheno, initial_mutate, log_level)
+                })
                 .collect()
         } else {
             // Sequential development for small populations
@@ -464,7 +466,12 @@ where
     /// The development process involves repeated mutation attempts until a phenotype
     /// within the specified bounds is achieved. If after the maximum number of attempts,
     /// a valid phenotype is not obtained, an error is returned.
-    fn develop_thread_local(&self, pheno: Pheno, initial_mutate: bool, log_level: &LogLevel) -> Result<Pheno> {
+    fn develop_thread_local(
+        &self,
+        pheno: Pheno,
+        initial_mutate: bool,
+        log_level: &LogLevel,
+    ) -> Result<Pheno> {
         let mut phenotype = pheno;
 
         // Apply initial mutation if requested
@@ -547,8 +554,8 @@ where
 mod tests {
     use super::*;
     use crate::{
-        evolution::options::{EvolutionOptions, LogLevel}, 
-        phenotype::Phenotype, 
+        evolution::options::{EvolutionOptions, LogLevel},
+        phenotype::Phenotype,
         rng::RandomNumberGenerator,
     };
 
