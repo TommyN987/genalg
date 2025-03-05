@@ -1,44 +1,46 @@
-//! # EvolutionOptions
+//! # Evolution Options
 //!
-//! The `EvolutionOptions` struct represents the configuration options for an evolutionary
-//! algorithm. It includes parameters such as the number of generations, logging level,
-//! population size, and the number of offsprings.
+//! This module provides the `EvolutionOptions` struct, which is used to configure
+//! the evolution process.
 //!
 //! ## Example
 //!
-//! ```rust
+//! ```
 //! use genalg::evolution::options::{EvolutionOptions, LogLevel};
 //!
-//! // Create a new EvolutionOptions instance with custom parameters
-//! let custom_options = EvolutionOptions::new(200, LogLevel::Verbose, 50, 10);
+//! // Create a custom options instance
+//! let custom_options = EvolutionOptions::new(200, LogLevel::Debug, 50, 10);
 //!
-//! // Create a new EvolutionOptions instance with default parameters
-//! let default_options = EvolutionOptions::default();
+//! // Or use the builder pattern
+//! let builder_options = EvolutionOptions::builder()
+//!     .num_generations(200)
+//!     .log_level(LogLevel::Info)
+//!     .population_size(50)
+//!     .num_offspring(100)
+//!     .build();
 //! ```
 //!
 //! ## Structs
 //!
 //! ### `EvolutionOptions`
 //!
-//! A struct representing the configuration options for an evolutionary algorithm.
+//! The `EvolutionOptions` struct contains configuration parameters for the evolution process:
 //!
-//! #### Fields
-//!
-//! - `num_generations`: The number of generations for the evolutionary algorithm.
+//! - `num_generations`: The number of generations to evolve.
 //! - `log_level`: The logging level for the algorithm, represented by the `LogLevel` enum.
 //! - `population_size`: The size of the population in each generation.
-//! - `num_offsprings`: The number of offsprings generated in each generation.
+//! - `num_offsprings`: The number of offspring to generate in each generation.
 //! - `parallel_threshold`: The minimum number of items to process in parallel.
 //!
 //! ### `LogLevel`
 //!
-//! An enum representing different logging levels for the evolutionary algorithm.
+//! The `LogLevel` enum defines the level of logging for the evolution process:
 //!
 //! #### Variants
 //!
-//! - `Verbose`: Provides detailed logging information.
-//! - `Minimal`: Provides minimal logging information.
-//! - `None`: Disables logging.
+//! - `Debug`: Detailed logging including all phenotypes and scores (maps to tracing::debug!)
+//! - `Info`: Basic progress information (maps to tracing::info!)
+//! - `None`: No logging output
 //!
 //! ## Methods
 //!
@@ -48,16 +50,25 @@
 //!
 //! ### `EvolutionOptions::new_with_threshold(num_generations: usize, log_level: LogLevel, population_size: usize, num_offsprings: usize, parallel_threshold: usize) -> Self`
 //!
-//! Creates a new `EvolutionOptions` instance with all parameters specified.
+//! Creates a new `EvolutionOptions` instance with the specified parameters, including a custom parallel threshold.
 //!
 //! ### `EvolutionOptions::default() -> Self`
 //!
 //! Creates a new `EvolutionOptions` instance with default parameters.
 
+/// Defines the level of logging for the evolution process.
+///
+/// This enum aligns with the standard tracing log levels:
+/// - `Debug`: Detailed information for debugging (maps to tracing::debug!)
+/// - `Info`: General information about progress (maps to tracing::info!)
+/// - `None`: No logging output
 #[derive(Debug, Clone)]
 pub enum LogLevel {
-    Verbose,
-    Minimal,
+    /// Detailed logging including all phenotypes and scores (maps to tracing::debug!)
+    Debug,
+    /// Basic progress information (maps to tracing::info!)
+    Info,
+    /// No logging output
     None,
 }
 
@@ -72,6 +83,26 @@ pub struct EvolutionOptions {
 }
 
 impl EvolutionOptions {
+    /// Creates a new `EvolutionOptions` instance with the specified parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_generations` - The number of generations to evolve.
+    /// * `log_level` - The logging level for the algorithm.
+    /// * `population_size` - The size of the population in each generation.
+    /// * `num_offsprings` - The number of offspring to generate in each generation.
+    ///
+    /// # Returns
+    ///
+    /// A new `EvolutionOptions` instance.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use genalg::evolution::options::{EvolutionOptions, LogLevel};
+    ///
+    /// let options = EvolutionOptions::new(100, LogLevel::Info, 10, 50);
+    /// ```
     pub fn new(
         num_generations: usize,
         log_level: LogLevel,
@@ -87,15 +118,28 @@ impl EvolutionOptions {
         }
     }
 
-    /// Creates a new `EvolutionOptions` instance with all parameters specified.
+    /// Creates a new `EvolutionOptions` instance with the specified parameters,
+    /// including a custom parallel threshold.
     ///
     /// # Arguments
     ///
-    /// * `num_generations` - The number of generations for the evolutionary algorithm.
+    /// * `num_generations` - The number of generations to evolve.
     /// * `log_level` - The logging level for the algorithm.
     /// * `population_size` - The size of the population in each generation.
-    /// * `num_offsprings` - The number of offsprings generated in each generation.
+    /// * `num_offsprings` - The number of offspring to generate in each generation.
     /// * `parallel_threshold` - The minimum number of items to process in parallel.
+    ///
+    /// # Returns
+    ///
+    /// A new `EvolutionOptions` instance.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use genalg::evolution::options::{EvolutionOptions, LogLevel};
+    ///
+    /// let options = EvolutionOptions::new_with_threshold(100, LogLevel::Info, 10, 50, 1000);
+    /// ```
     pub fn new_with_threshold(
         num_generations: usize,
         log_level: LogLevel,
@@ -158,19 +202,23 @@ impl EvolutionOptions {
         self.parallel_threshold = threshold;
     }
 
-    /// Returns a builder for creating an `EvolutionOptions` instance.
+    /// Creates a builder for constructing an `EvolutionOptions` instance.
     ///
-    /// This provides a more flexible way to configure evolution options
-    /// with a fluent interface.
+    /// This method returns an `EvolutionOptionsBuilder` that can be used to
+    /// construct an `EvolutionOptions` instance using the builder pattern.
+    ///
+    /// # Returns
+    ///
+    /// An `EvolutionOptionsBuilder` instance.
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use genalg::evolution::options::{EvolutionOptions, LogLevel};
     ///
     /// let options = EvolutionOptions::builder()
     ///     .num_generations(200)
-    ///     .log_level(LogLevel::Minimal)
+    ///     .log_level(LogLevel::Info)
     ///     .population_size(50)
     ///     .num_offspring(100)
     ///     .parallel_threshold(500)

@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use tracing::{debug, info};
+
 use super::{
     challenge::Challenge,
     options::{EvolutionOptions, LogLevel},
@@ -232,11 +234,15 @@ where
 
             // Log progress if requested
             match options.get_log_level() {
-                LogLevel::Minimal => println!("Generation: {}", generation),
-                LogLevel::Verbose => {
+                LogLevel::Info => info!(generation, "Evolution progress"),
+                LogLevel::Debug => {
                     fitness.iter().for_each(|result| {
-                        println!("Generation: {} \n", generation);
-                        println!("Phenotype: {:?} \n Score: {}", result.pheno, result.score);
+                        debug!(
+                            generation,
+                            phenotype = ?result.pheno,
+                            score = result.score,
+                            "Evolution detailed progress"
+                        );
                     });
                 }
                 LogLevel::None => {}

@@ -90,7 +90,7 @@ fn main() {
     let starting_value = MyPhenotype { value: 0.0 };
     let options = EvolutionOptions::builder()
         .num_generations(100)
-        .log_level(LogLevel::Minimal)
+        .log_level(LogLevel::Info)
         .population_size(10)
         .num_offspring(50)
         .parallel_threshold(1000)
@@ -153,7 +153,7 @@ Configure the evolution process with `EvolutionOptions`:
 ```rust
 let options = EvolutionOptions::new(
     100,                // Number of generations
-    LogLevel::Minimal,  // Logging level
+    LogLevel::Info,     // Logging level
     10,                 // Population size
     50,                 // Number of offspring per generation
 );
@@ -161,7 +161,7 @@ let options = EvolutionOptions::new(
 // Or with parallel threshold
 let options = EvolutionOptions::new_with_threshold(
     100,                // Number of generations
-    LogLevel::Minimal,  // Logging level
+    LogLevel::Info,     // Logging level
     10,                 // Population size
     50,                 // Number of offspring per generation
     1000,               // Parallel threshold (min items to process in parallel)
@@ -350,6 +350,54 @@ fn mutate_thread_local(&mut self) {
     self.value += delta;
 }
 ```
+
+### Logging with Tracing
+
+GenAlg uses the `tracing` crate for structured logging. To enable logging in your application, you need to set up a tracing subscriber:
+
+```rust
+use tracing_subscriber::{fmt, EnvFilter};
+
+// Initialize the default subscriber with an environment filter
+fn setup_logging() {
+    fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+}
+
+// Or with a specific level
+fn setup_logging_with_level() {
+    fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+}
+
+fn main() {
+    // Set up logging before running the evolution
+    setup_logging();
+    
+    // ... rest of your code ...
+}
+```
+
+You can control the verbosity of GenAlg's logging by:
+
+1. Setting the `LogLevel` in `EvolutionOptions`:
+   - `LogLevel::Debug`: Detailed logging including phenotypes and scores
+   - `LogLevel::Info`: Basic progress information
+   - `LogLevel::None`: No logging output
+
+2. Setting the tracing level through the environment variable:
+   ```bash
+   RUST_LOG=debug cargo run
+   ```
+
+3. Setting the tracing level programmatically:
+   ```rust
+   tracing_subscriber::fmt()
+       .with_max_level(tracing::Level::DEBUG)
+       .init();
+   ```
 
 ## Error Handling
 
