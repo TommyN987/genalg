@@ -133,7 +133,7 @@
 //! let starting_value = MyPhenotype { value: 0.0 };
 //! let options = EvolutionOptions::builder()
 //!     .num_generations(100)
-//!     .log_level(LogLevel::Minimal)
+//!     .log_level(LogLevel::Info)
 //!     .population_size(10)
 //!     .num_offspring(50)
 //!     .build();
@@ -178,7 +178,7 @@
 //! // Using the builder pattern
 //! let options = EvolutionOptions::builder()
 //!     .num_generations(100)
-//!     .log_level(LogLevel::Minimal)
+//!     .log_level(LogLevel::Info)
 //!     .population_size(10)
 //!     .num_offspring(50)
 //!     .parallel_threshold(500) // Use parallel processing when population >= 500

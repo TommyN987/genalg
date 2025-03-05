@@ -10,15 +10,17 @@
 //! phenotype satisfies the constraints set up by the `Magnitude` trait.
 use std::{fmt::Debug, marker::PhantomData};
 
+use rayon::prelude::*;
+use tracing::{debug, info};
+
 use crate::{
     error::{GeneticError, Result},
     evolution::options::EvolutionOptions,
+    evolution::options::LogLevel,
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
+    strategy::BreedStrategy,
 };
-use rayon::prelude::*;
-
-use super::BreedStrategy;
 
 /// Trait for phenotypes that have a measurable magnitude with defined bounds.
 ///
@@ -300,19 +302,20 @@ where
 
         // Develop all children (in parallel if there are enough)
         let parallel_threshold = evol_options.get_parallel_threshold();
+        let log_level = evol_options.get_log_level();
 
         if children_to_develop.len() >= parallel_threshold {
             // Parallel development
             children_to_develop
                 .into_par_iter()
-                .map(|(pheno, initial_mutate)| self.develop_thread_local(pheno, initial_mutate))
+                .map(|(pheno, initial_mutate)| self.develop_thread_local(pheno, initial_mutate, log_level))
                 .collect()
         } else {
             // Sequential development for small populations
             let mut developed_children = Vec::with_capacity(children_to_develop.len());
 
             for (pheno, initial_mutate) in children_to_develop {
-                developed_children.push(self.develop(pheno, rng, initial_mutate)?);
+                developed_children.push(self.develop(pheno, rng, initial_mutate, log_level)?);
             }
 
             Ok(developed_children)
@@ -332,6 +335,7 @@ where
     /// * `pheno` - The initial phenotype to be developed.
     /// * `rng` - A random number generator for introducing randomness.
     /// * `initial_mutate` - A flag indicating whether to apply initial mutation.
+    /// * `log_level` - The log level for development progress logging.
     ///
     /// # Returns
     ///
@@ -355,14 +359,16 @@ where
         pheno: Pheno,
         rng: &mut RandomNumberGenerator,
         initial_mutate: bool,
+        log_level: &LogLevel,
     ) -> Result<Pheno> {
         let mut phenotype = pheno;
 
+        // Apply initial mutation if requested
         if initial_mutate {
             phenotype.mutate(rng);
         }
 
-        // Check if the initial phenotype is already within bounds
+        // Check if the phenotype is already within bounds
         if phenotype.is_within_bounds() {
             return Ok(phenotype);
         }
@@ -395,10 +401,30 @@ where
 
             // If we've tried many times without success, log the progress
             if attempt % (self.config.max_development_attempts / 10) == 0 {
-                // This could be replaced with a proper logging system
-                // println!("Development attempt {}/{}: current magnitude = {}, bounds = [{}, {}]",
-                //     attempt, self.max_development_attempts, phenotype.magnitude(),
-                //     phenotype.min_magnitude(), phenotype.max_magnitude());
+                match log_level {
+                    LogLevel::Debug => {
+                        debug!(
+                            attempt,
+                            max_attempts = self.config.max_development_attempts,
+                            magnitude = phenotype.magnitude(),
+                            min_bound = phenotype.min_magnitude(),
+                            max_bound = phenotype.max_magnitude(),
+                            "Development attempt progress"
+                        );
+                    }
+                    LogLevel::Info => {
+                        if attempt == self.config.max_development_attempts / 2 {
+                            info!(
+                                progress = "50%",
+                                magnitude = phenotype.magnitude(),
+                                min_bound = phenotype.min_magnitude(),
+                                max_bound = phenotype.max_magnitude(),
+                                "Development halfway complete"
+                            );
+                        }
+                    }
+                    LogLevel::None => {}
+                }
             }
         }
 
@@ -419,6 +445,7 @@ where
     ///
     /// * `pheno` - The initial phenotype to be developed.
     /// * `initial_mutate` - A flag indicating whether to apply initial mutation.
+    /// * `log_level` - The log level for development progress logging.
     ///
     /// # Returns
     ///
@@ -437,14 +464,15 @@ where
     /// The development process involves repeated mutation attempts until a phenotype
     /// within the specified bounds is achieved. If after the maximum number of attempts,
     /// a valid phenotype is not obtained, an error is returned.
-    fn develop_thread_local(&self, pheno: Pheno, initial_mutate: bool) -> Result<Pheno> {
+    fn develop_thread_local(&self, pheno: Pheno, initial_mutate: bool, log_level: &LogLevel) -> Result<Pheno> {
         let mut phenotype = pheno;
 
+        // Apply initial mutation if requested
         if initial_mutate {
             phenotype.mutate_thread_local();
         }
 
-        // Check if the initial phenotype is already within bounds
+        // Check if the phenotype is already within bounds
         if phenotype.is_within_bounds() {
             return Ok(phenotype);
         }
@@ -477,10 +505,30 @@ where
 
             // If we've tried many times without success, log the progress
             if attempt % (self.config.max_development_attempts / 10) == 0 {
-                // This could be replaced with a proper logging system
-                // println!("Development attempt {}/{}: current magnitude = {}, bounds = [{}, {}]",
-                //     attempt, self.max_development_attempts, phenotype.magnitude(),
-                //     phenotype.min_magnitude(), phenotype.max_magnitude());
+                match log_level {
+                    LogLevel::Debug => {
+                        debug!(
+                            attempt,
+                            max_attempts = self.config.max_development_attempts,
+                            magnitude = phenotype.magnitude(),
+                            min_bound = phenotype.min_magnitude(),
+                            max_bound = phenotype.max_magnitude(),
+                            "Development attempt progress"
+                        );
+                    }
+                    LogLevel::Info => {
+                        if attempt == self.config.max_development_attempts / 2 {
+                            info!(
+                                progress = "50%",
+                                magnitude = phenotype.magnitude(),
+                                min_bound = phenotype.min_magnitude(),
+                                max_bound = phenotype.max_magnitude(),
+                                "Development halfway complete"
+                            );
+                        }
+                    }
+                    LogLevel::None => {}
+                }
             }
         }
 
@@ -499,10 +547,12 @@ where
 mod tests {
     use super::*;
     use crate::{
-        evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
+        evolution::options::{EvolutionOptions, LogLevel}, 
+        phenotype::Phenotype, 
+        rng::RandomNumberGenerator,
     };
 
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Debug)]
     struct TestPhenotype {
         value: f64,
         min_bound: f64,
@@ -550,7 +600,7 @@ mod tests {
         let strategy = BoundedBreedStrategy::default();
         let pheno = TestPhenotype::new(5.0, 4.0, 6.0);
 
-        let result = strategy.develop(pheno, &mut rng, false);
+        let result = strategy.develop(pheno, &mut rng, false, &LogLevel::None);
         assert!(result.is_ok());
 
         let developed = result.unwrap();
@@ -566,7 +616,7 @@ mod tests {
         // Create a phenotype that's very unlikely to mutate into the valid range
         let pheno = TestPhenotype::new(100.0, 0.0, 0.1);
 
-        let result = strategy.develop(pheno, &mut rng, false);
+        let result = strategy.develop(pheno, &mut rng, false, &LogLevel::None);
         assert!(result.is_err());
 
         match result {
