@@ -70,11 +70,7 @@ fn test_bounded() {
     let options = EvolutionOptions::default();
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = BoundedBreedStrategy::default();
-    let launcher: EvolutionLauncher<
-        XCoordinate,
-        BoundedBreedStrategy<XCoordinate>,
-        XCoordinateChallenge,
-    > = EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
     let winner = launcher.configure(options, starting_value).run().unwrap();
     assert!((winner.pheno.get_x() - 3.0).abs() < 1e-2);
 }
@@ -85,11 +81,7 @@ fn test_bounded_with_custom_attempts() {
     let options = EvolutionOptions::default();
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = BoundedBreedStrategy::new(500); // Use fewer attempts
-    let launcher: EvolutionLauncher<
-        XCoordinate,
-        BoundedBreedStrategy<XCoordinate>,
-        XCoordinateChallenge,
-    > = EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
     let winner = launcher.configure(options, starting_value).run().unwrap();
     assert!((winner.pheno.get_x() - 3.0).abs() < 1e-2);
 }
@@ -101,11 +93,7 @@ fn test_bounded_with_invalid_options() {
     let options = EvolutionOptions::new(100, genalg::evolution::LogLevel::None, 0, 20);
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = BoundedBreedStrategy::default();
-    let launcher: EvolutionLauncher<
-        XCoordinate,
-        BoundedBreedStrategy<XCoordinate>,
-        XCoordinateChallenge,
-    > = EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
 
     let result = launcher.configure(options, starting_value).run();
     assert!(result.is_err());

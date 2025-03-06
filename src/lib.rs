@@ -96,10 +96,22 @@
 //! 2. [`BoundedBreedStrategy`]: Similar to `OrdinaryStrategy` but imposes bounds on
 //!    phenotypes during evolution using the [`Magnitude`] trait.
 //!
+//! ### Selection Strategies
+//!
+//! GenAlg provides several built-in selection strategies:
+//!
+//! 1. [`ElitistSelection`]: Selects the best individuals based on fitness.
+//!
+//! 2. [`TournamentSelection`]: Selects individuals through tournament selection.
+//!
+//! 3. [`RouletteWheelSelection`]: Selects individuals with probability proportional to fitness.
+//!
+//! 4. [`RankBasedSelection`]: Selects individuals based on their rank in the population.
+//!
 //! ### Evolution Launcher
 //!
 //! The [`EvolutionLauncher`] manages the evolution process using a specified breeding
-//! strategy and challenge:
+//! strategy, selection strategy, and challenge:
 //!
 //! ```rust
 //! use genalg::{
@@ -107,6 +119,7 @@
 //!     phenotype::Phenotype,
 //!     rng::RandomNumberGenerator,
 //!     strategy::OrdinaryStrategy,
+//!     selection::ElitistSelection,
 //! };
 //!
 //! #[derive(Clone, Debug)]
@@ -124,31 +137,28 @@
 //!     target: f64,
 //! }
 //!
-//! // Implementation of Challenge trait omitted for brevity
-//! # impl Challenge<MyPhenotype> for MyChallenge {
-//! #     fn score(&self, phenotype: &MyPhenotype) -> f64 { 0.0 }
-//! # }
+//! impl Challenge<MyPhenotype> for MyChallenge {
+//!     fn score(&self, phenotype: &MyPhenotype) -> f64 {
+//!         // Calculate and return fitness score (higher is better)
+//!         1.0 / (phenotype.value - self.target).abs().max(0.001)
+//!     }
+//! }
 //!
-//! // Initialize components
-//! let starting_value = MyPhenotype { value: 0.0 };
-//! let options = EvolutionOptions::builder()
-//!     .num_generations(100)
-//!     .log_level(LogLevel::Info)
-//!     .population_size(10)
-//!     .num_offspring(50)
-//!     .build();
+//! // Create components for evolution
+//! let breed_strategy = OrdinaryStrategy::default();
+//! let selection_strategy = ElitistSelection::default();
 //! let challenge = MyChallenge { target: 42.0 };
-//! let strategy = OrdinaryStrategy::default();
+//! let options = EvolutionOptions::default();
+//! let starting_value = MyPhenotype { value: 0.0 };
 //!
-//! // Create and run the evolution
-//! let launcher = EvolutionLauncher::new(strategy, challenge);
+//! // Create launcher with breeding and selection strategies
+//! let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
+//!
+//! // Configure and run the evolution
 //! let result = launcher
 //!     .configure(options, starting_value)
 //!     .with_seed(42)  // Optional: Set a specific seed
-//!     .run()
-//!     .unwrap();
-//!
-//! println!("Best solution: {:?}, Fitness: {}", result.pheno, result.score);
+//!     .run();
 //! ```
 //!
 //! ### Thread-Local Random Number Generation
@@ -233,15 +243,20 @@
 //! - [`phenotype`]: Phenotype trait definition
 //! - [`rng`]: Random number generation utilities
 //! - [`strategy`]: Breeding strategy implementations
+//! - [`selection`]: Selection strategy implementations
 //!
 //! [`Phenotype`]: phenotype::Phenotype
 //! [`Challenge`]: evolution::Challenge
-//! [`OrdinaryStrategy`]: strategy::OrdinaryStrategy
+//! [`OrdinaryStrategy`]: strategy::ordinary::OrdinaryStrategy
 //! [`BoundedBreedStrategy`]: strategy::bounded::BoundedBreedStrategy
 //! [`Magnitude`]: strategy::bounded::Magnitude
 //! [`EvolutionLauncher`]: evolution::EvolutionLauncher
 //! [`EvolutionOptions`]: evolution::options::EvolutionOptions
 //! [`ThreadLocalRng`]: rng::ThreadLocalRng
+//! [`ElitistSelection`]: selection::ElitistSelection
+//! [`TournamentSelection`]: selection::TournamentSelection
+//! [`RouletteWheelSelection`]: selection::RouletteWheelSelection
+//! [`RankBasedSelection`]: selection::RankBasedSelection
 
 pub mod error;
 pub mod evolution;
