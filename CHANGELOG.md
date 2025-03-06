@@ -19,12 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Builder pattern for configuration objects
 - Extensive documentation and examples
 - Benchmarks for performance testing
+- Constraint handling framework for combinatorial optimization
+- Local search algorithms: Hill Climbing, Simulated Annealing, and Tabu Search
+- Specialized breeding strategy for combinatorial problems
+- Fitness caching mechanisms for performance optimization
 
 ### Performance
 - Optimized parallel processing for fitness evaluation and breeding
 - Thread-local RNG implementation to eliminate mutex contention
 - Significant performance improvements for large populations
 - Automatic parallelization threshold configuration
+- Fitness caching to avoid redundant evaluations
+- Local search integration for solution refinement
 - Flexible selection strategies for optimizing convergence speed and solution quality
 
 ### Documentation

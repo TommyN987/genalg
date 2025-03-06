@@ -264,6 +264,9 @@ pub mod phenotype;
 pub mod rng;
 pub mod selection;
 pub mod strategy;
+pub mod constraints;
+pub mod local_search;
+pub mod caching;
 
 // Re-export commonly used types for convenience
 pub use error::{GeneticError, OptionExt, Result, ResultExt};
@@ -279,3 +282,7 @@ pub use strategy::{
     ordinary::OrdinaryStrategy,
     BreedStrategy,
 };
+pub use strategy::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
+pub use constraints::{Constraint, ConstraintManager, ConstraintViolation};
+pub use local_search::{LocalSearch, HillClimbing, SimulatedAnnealing};
+pub use caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};

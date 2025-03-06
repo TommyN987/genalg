@@ -410,6 +410,153 @@ This flexibility allows you to implement specialized breeding approaches such as
 - **Adaptive Parameter Control**: Dynamically adjust mutation and crossover rates
 - **Multi-objective Optimization**: Handle multiple competing objectives
 
+### Combinatorial Optimization
+
+For combinatorial optimization problems, GenAlg provides specialized components:
+
+#### Constraint Handling
+
+Define constraints that solutions must satisfy:
+
+```rust
+use genalg::constraints::{Constraint, ConstraintManager, ConstraintViolation};
+
+// Define a constraint
+#[derive(Debug, Clone)]
+struct UniqueElementsConstraint;
+
+impl<P> Constraint<P> for UniqueElementsConstraint
+where
+    P: Phenotype + AsRef<Vec<usize>>,
+{
+    fn check(&self, phenotype: &P) -> Vec<ConstraintViolation> {
+        let elements = phenotype.as_ref();
+        let mut seen = HashSet::new();
+        let mut violations = Vec::new();
+
+        for (idx, element) in elements.iter().enumerate() {
+            if !seen.insert(element) {
+                violations.push(ConstraintViolation::new(
+                    "UniqueElements",
+                    format!("Duplicate element {:?} at position {}", element, idx),
+                ));
+            }
+        }
+
+        violations
+    }
+    
+    // Optionally implement repair methods
+    fn repair(&self, phenotype: &mut P) -> bool {
+        // Repair logic
+        false
+    }
+    
+    fn repair_with_rng(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
+        // Repair logic with randomness
+        false
+    }
+}
+
+// Use the constraint manager
+let mut constraint_manager = ConstraintManager::new();
+constraint_manager.add_constraint(UniqueElementsConstraint);
+
+// Check if a solution is valid
+let is_valid = constraint_manager.is_valid(&solution);
+
+// Get all constraint violations
+let violations = constraint_manager.check_all(&solution);
+
+// Try to repair an invalid solution
+let repaired = constraint_manager.repair_all(&solution);
+```
+
+#### Combinatorial Breeding Strategy
+
+Use the specialized breeding strategy for combinatorial problems:
+
+```rust
+use genalg::strategy::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
+use genalg::constraints::{Constraint, ConstraintManager};
+use genalg::local_search::HillClimbing;
+
+// Create a constraint manager
+let mut constraint_manager = ConstraintManager::new();
+constraint_manager.add_constraint(MyConstraint);
+
+// Configure the breeding strategy
+let config = CombinatorialBreedConfig::builder()
+    .repair_probability(0.8)
+    .max_repair_attempts(20)
+    .use_elitism(true)
+    .num_elites(2)
+    .local_search_probability(0.1)
+    .build();
+
+// Create the breeding strategy
+let mut strategy = CombinatorialBreedStrategy::new(config);
+
+// Add constraints
+strategy.add_constraint(MyConstraint);
+
+// Add local search (optional)
+let hill_climbing = HillClimbing::new(10);
+strategy.with_local_search(hill_climbing);
+
+// Use with the evolution launcher
+let launcher = EvolutionLauncher::new(strategy, challenge);
+```
+
+#### Local Search Integration
+
+Improve solutions with local search algorithms:
+
+```rust
+use genalg::local_search::{LocalSearch, HillClimbing, SimulatedAnnealing};
+
+// Hill climbing
+let hill_climbing = HillClimbing::new(10);
+hill_climbing.search(&mut solution, &challenge);
+
+// Simulated annealing
+let simulated_annealing = SimulatedAnnealing::new(100, 1.0, 0.95);
+simulated_annealing.search(&mut solution, &challenge);
+
+// Combine multiple local search algorithms
+let mut hybrid = HybridLocalSearch::new();
+hybrid.add_algorithm(HillClimbing::new(5))
+      .add_algorithm(SimulatedAnnealing::new(10, 0.5, 0.9));
+hybrid.search(&mut solution, &challenge);
+```
+
+#### Fitness Caching
+
+Improve performance by caching fitness evaluations:
+
+```rust
+use genalg::caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};
+
+// Implement CacheKey for your phenotype
+impl CacheKey for MyPhenotype {
+    type Key = String;
+    
+    fn cache_key(&self) -> Self::Key {
+        // Generate a unique key for this phenotype
+        format!("{}", self.value)
+    }
+}
+
+// Wrap your challenge with caching
+let cached_challenge = CachedChallenge::new(challenge);
+
+// Or use thread-local caching for parallel contexts
+let thread_local_cached_challenge = ThreadLocalCachedChallenge::new(challenge);
+
+// Use with the evolution launcher
+let launcher = EvolutionLauncher::new(strategy, cached_challenge);
+```
+
 ### Parallel Processing
 
 GenAlg automatically uses parallel processing for fitness evaluation and breeding when the population size exceeds the parallel threshold. Configure this in your `EvolutionOptions`:
