@@ -365,8 +365,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rng::RandomNumberGenerator;
-    use std::collections::{HashMap, HashSet};
 
     // Test the constraint violation struct
     #[test]

@@ -3,9 +3,6 @@
 //! This module provides specialized breeding strategies for combinatorial optimization problems.
 //! These strategies are designed to handle discrete solution spaces and constraints effectively.
 
-use std::fmt::Debug;
-use std::marker::PhantomData;
-
 use crate::constraints::ConstraintManager;
 use crate::error::{GeneticError, Result};
 use crate::evolution::options::EvolutionOptions;
@@ -13,8 +10,8 @@ use crate::local_search::LocalSearch;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 use crate::strategy::BreedStrategy;
+use std::fmt::Debug;
 
-/// Configuration for the combinatorial breeding strategy.
 #[derive(Debug, Clone)]
 pub struct CombinatorialBreedConfig {
     /// The probability of applying local search to offspring
@@ -41,7 +38,6 @@ impl Default for CombinatorialBreedConfig {
     }
 }
 
-/// Builder for the combinatorial breeding strategy configuration.
 #[derive(Debug, Default)]
 pub struct CombinatorialBreedConfigBuilder {
     local_search_probability: Option<f64>,
@@ -52,37 +48,31 @@ pub struct CombinatorialBreedConfigBuilder {
 }
 
 impl CombinatorialBreedConfigBuilder {
-    /// Sets the probability of applying local search to offspring.
     pub fn local_search_probability(mut self, value: f64) -> Self {
         self.local_search_probability = Some(value);
         self
     }
 
-    /// Sets the probability of repairing invalid solutions.
     pub fn repair_probability(mut self, value: f64) -> Self {
         self.repair_probability = Some(value);
         self
     }
 
-    /// Sets the maximum number of repair attempts.
     pub fn max_repair_attempts(mut self, value: usize) -> Self {
         self.max_repair_attempts = Some(value);
         self
     }
 
-    /// Sets whether to use elitism (preserving the best solutions).
     pub fn use_elitism(mut self, value: bool) -> Self {
         self.use_elitism = Some(value);
         self
     }
 
-    /// Sets the number of elite solutions to preserve.
     pub fn num_elites(mut self, value: usize) -> Self {
         self.num_elites = Some(value);
         self
     }
 
-    /// Builds the configuration.
     pub fn build(self) -> CombinatorialBreedConfig {
         let default = CombinatorialBreedConfig::default();
         CombinatorialBreedConfig {
@@ -102,7 +92,6 @@ impl CombinatorialBreedConfigBuilder {
 }
 
 impl CombinatorialBreedConfig {
-    /// Creates a builder for the combinatorial breeding strategy configuration.
     pub fn builder() -> CombinatorialBreedConfigBuilder {
         CombinatorialBreedConfigBuilder::default()
     }
@@ -123,14 +112,10 @@ where
     L: LocalSearch<P, Ch> + Clone,
     Ch: crate::evolution::Challenge<P> + Clone + std::fmt::Debug,
 {
-    /// The configuration for the breeding strategy
     config: CombinatorialBreedConfig,
-    /// The constraint manager for validating and repairing solutions
     constraint_manager: ConstraintManager<P>,
-    /// The local search algorithm for improving solutions
     local_search: Option<L>,
-    /// Phantom data for the challenge type
-    _marker: PhantomData<Ch>,
+    challenge: Ch,
 }
 
 impl<P, L, Ch> CombinatorialBreedStrategy<P, L, Ch>
@@ -139,22 +124,22 @@ where
     L: LocalSearch<P, Ch> + Clone,
     Ch: crate::evolution::Challenge<P> + Clone + std::fmt::Debug,
 {
-    /// Creates a new combinatorial breeding strategy with the given configuration.
-    pub fn new(config: CombinatorialBreedConfig) -> Self {
+    /// Creates a new combinatorial breed strategy with the given configuration.
+    pub fn new(config: CombinatorialBreedConfig, challenge: Ch) -> Self {
         Self {
             config,
             constraint_manager: ConstraintManager::new(),
             local_search: None,
-            _marker: PhantomData,
+            challenge,
         }
     }
 
-    /// Creates a new combinatorial breeding strategy with default configuration.
-    pub fn default_config() -> Self {
-        Self::new(CombinatorialBreedConfig::default())
+    /// Creates a new combinatorial breed strategy with the default configuration.
+    pub fn default_config(challenge: Ch) -> Self {
+        Self::new(CombinatorialBreedConfig::default(), challenge)
     }
 
-    /// Adds a constraint to the breeding strategy.
+    /// Adds a constraint to the strategy.
     pub fn add_constraint<T>(&mut self, constraint: T) -> &mut Self
     where
         T: crate::constraints::Constraint<P> + 'static,
@@ -163,44 +148,42 @@ where
         self
     }
 
-    /// Sets the local search algorithm for the breeding strategy.
+    /// Sets the local search algorithm to use.
     pub fn with_local_search(&mut self, local_search: L) -> &mut Self {
         self.local_search = Some(local_search);
         self
     }
 
-    /// Attempts to repair an invalid solution.
-    ///
-    /// Returns `true` if the solution was successfully repaired, `false` otherwise.
+    /// Attempts to repair a solution that violates constraints.
     fn repair_solution(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
+        // Check if there are any violations
+        if self.constraint_manager.is_valid(phenotype) {
+            return true;
+        }
+
+        // Try to repair the solution
         for _ in 0..self.config.max_repair_attempts {
             if self.constraint_manager.repair_all_with_rng(phenotype, rng) {
                 return true;
             }
-
-            // If repair failed, try mutating and repairing again
-            phenotype.mutate(rng);
         }
 
         false
     }
 
     /// Applies local search to a solution if configured.
-    ///
-    /// Returns `true` if local search was applied and improved the solution,
-    /// `false` otherwise.
-    fn apply_local_search(
-        &self,
-        phenotype: &mut P,
-        challenge: &Ch,
-        rng: &mut RandomNumberGenerator,
-    ) -> bool {
+    fn apply_local_search(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
         if let Some(local_search) = &self.local_search {
             let uniform = rng.fetch_uniform(0.0, 1.0, 1);
-            let random = uniform.front().unwrap();
-
-            if *random < self.config.local_search_probability as f32 {
-                return local_search.search_with_rng(phenotype, challenge, rng);
+            match uniform.front() {
+                Some(val) if *val < self.config.local_search_probability as f32 => {
+                    return local_search.search_with_rng(phenotype, &self.challenge, rng);
+                }
+                None => {
+                    // If random generation fails, just skip local search
+                    return false;
+                }
+                _ => {}
             }
         }
 
@@ -209,16 +192,55 @@ where
 
     /// Performs tournament selection on the parents.
     ///
-    /// Returns the index of the selected parent.
-    fn tournament_selection(&self, parents: &[P], rng: &mut RandomNumberGenerator) -> usize {
-        // Simple tournament selection with tournament size 2
+    /// Returns the index of the selected parent based on fitness comparison.
+    /// In tournament selection, two individuals are randomly chosen and the one
+    /// with higher fitness is selected.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if:
+    /// - The random number generation fails
+    /// - The parents array is empty
+    fn tournament_selection(
+        &self,
+        parents: &[P],
+        rng: &mut RandomNumberGenerator,
+    ) -> Result<usize> {
+        if parents.is_empty() {
+            return Err(GeneticError::EmptyPopulation);
+        }
+
+        // Generate random indices for two parents
         let uniform1 = rng.fetch_uniform(0.0, parents.len() as f32, 1);
-        let idx1 = (uniform1.front().unwrap() * parents.len() as f32) as usize;
+        let idx1 = match uniform1.front() {
+            Some(val) => ((val * parents.len() as f32) as usize) % parents.len(),
+            None => {
+                return Err(GeneticError::RandomGeneration(
+                    "Failed to generate random value for tournament selection".to_string(),
+                ))
+            }
+        };
 
         let uniform2 = rng.fetch_uniform(0.0, parents.len() as f32, 1);
-        let _idx2 = (uniform2.front().unwrap() * parents.len() as f32) as usize;
+        let idx2 = match uniform2.front() {
+            Some(val) => ((val * parents.len() as f32) as usize) % parents.len(),
+            None => {
+                return Err(GeneticError::RandomGeneration(
+                    "Failed to generate random value for tournament selection".to_string(),
+                ))
+            }
+        };
 
-        idx1 % parents.len()
+        // Compare fitness and return the index of the better parent
+        let fitness1 = self.challenge.score(&parents[idx1]);
+        let fitness2 = self.challenge.score(&parents[idx2]);
+
+        // Higher fitness is better
+        if fitness1 >= fitness2 {
+            Ok(idx1)
+        } else {
+            Ok(idx2)
+        }
     }
 }
 
@@ -248,16 +270,11 @@ where
             }
         }
 
-        // Get the challenge from the first parent for local search
-        // This is a bit of a hack, but we need the challenge for local search
-        // In a real implementation, the challenge would be passed to the breed method
-        let challenge: Option<&Ch> = None;
-
         // Generate remaining children
         while children.len() < evol_options.get_num_offspring() {
             // Select parents using tournament selection
-            let parent1_idx = self.tournament_selection(parents, rng);
-            let parent2_idx = self.tournament_selection(parents, rng);
+            let parent1_idx = self.tournament_selection(parents, rng)?;
+            let parent2_idx = self.tournament_selection(parents, rng)?;
 
             let parent1 = &parents[parent1_idx];
             let parent2 = &parents[parent2_idx];
@@ -270,18 +287,23 @@ where
             child.mutate(rng);
 
             // Repair if invalid and configured to do so
-            let uniform = rng.fetch_uniform(0.0, 1.0, 1);
-            let random = uniform.front().unwrap();
-            if *random < self.config.repair_probability as f32
+            let random = match rng.fetch_uniform(0.0, 1.0, 1).front() {
+                Some(val) => *val,
+                None => {
+                    return Err(GeneticError::RandomGeneration(
+                        "Failed to generate random value for repair probability".to_string(),
+                    ))
+                }
+            };
+
+            if random < self.config.repair_probability as f32
                 && !self.constraint_manager.is_valid(&child)
             {
                 self.repair_solution(&mut child, rng);
             }
 
-            // Apply local search if configured and we have a challenge
-            if let Some(ch) = challenge {
-                self.apply_local_search(&mut child, ch, rng);
-            }
+            // Apply local search if configured
+            self.apply_local_search(&mut child, rng);
 
             children.push(child);
         }
@@ -372,11 +394,10 @@ mod tests {
 
     impl Constraint<TestPhenotype> for UniqueValuesConstraint {
         fn check(&self, phenotype: &TestPhenotype) -> Vec<ConstraintViolation> {
-            let values = phenotype.as_ref();
             let mut seen = HashSet::new();
             let mut violations = Vec::new();
 
-            for (idx, &value) in values.iter().enumerate() {
+            for (idx, &value) in phenotype.values.iter().enumerate() {
                 if !seen.insert(value) {
                     violations.push(ConstraintViolation::new(
                         "UniqueValues",
@@ -389,20 +410,19 @@ mod tests {
         }
 
         fn repair(&self, phenotype: &mut TestPhenotype) -> bool {
-            let values = phenotype.as_mut();
             let mut seen = HashSet::new();
-            let mut modified = false;
+            let mut changed = false;
 
-            for i in 0..values.len() {
-                let mut value = values[i];
+            for i in 0..phenotype.values.len() {
+                let mut value = phenotype.values[i];
                 while !seen.insert(value) {
                     value += 1;
-                    modified = true;
+                    changed = true;
                 }
-                values[i] = value;
+                phenotype.values[i] = value;
             }
 
-            modified
+            changed
         }
 
         fn repair_with_rng(
@@ -410,7 +430,6 @@ mod tests {
             phenotype: &mut TestPhenotype,
             _rng: &mut RandomNumberGenerator,
         ) -> bool {
-            // For this simple constraint, we can just delegate to the non-RNG version
             self.repair(phenotype)
         }
     }
@@ -418,35 +437,38 @@ mod tests {
     #[test]
     fn test_combinatorial_breed_config() {
         // Test default config
-        let default_config = CombinatorialBreedConfig::default();
-        assert_eq!(default_config.local_search_probability, 0.1);
-        assert_eq!(default_config.repair_probability, 0.5);
-        assert_eq!(default_config.max_repair_attempts, 10);
-        assert!(default_config.use_elitism);
-        assert_eq!(default_config.num_elites, 1);
+        let config = CombinatorialBreedConfig::default();
+        assert_eq!(config.local_search_probability, 0.1);
+        assert_eq!(config.repair_probability, 0.5);
+        assert_eq!(config.max_repair_attempts, 10);
+        assert!(config.use_elitism);
+        assert_eq!(config.num_elites, 1);
 
         // Test builder
         let config = CombinatorialBreedConfig::builder()
             .local_search_probability(0.2)
-            .repair_probability(0.8)
+            .repair_probability(0.9)
             .max_repair_attempts(20)
             .use_elitism(false)
-            .num_elites(2)
+            .num_elites(0)
             .build();
 
         assert_eq!(config.local_search_probability, 0.2);
-        assert_eq!(config.repair_probability, 0.8);
+        assert_eq!(config.repair_probability, 0.9);
         assert_eq!(config.max_repair_attempts, 20);
         assert!(!config.use_elitism);
-        assert_eq!(config.num_elites, 2);
+        assert_eq!(config.num_elites, 0);
     }
 
     #[test]
     fn test_combinatorial_breed_strategy() {
         // Create a strategy
         let config = CombinatorialBreedConfig::default();
+        let challenge = TestChallenge::new(15);
         let mut strategy =
-            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(config);
+            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(
+                config, challenge,
+            );
 
         // Add a constraint
         strategy.add_constraint(UniqueValuesConstraint);
@@ -483,8 +505,11 @@ mod tests {
     fn test_repair_solution() {
         // Create a strategy
         let config = CombinatorialBreedConfig::default();
+        let challenge = TestChallenge::new(15);
         let mut strategy =
-            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(config);
+            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(
+                config, challenge,
+            );
 
         // Add a constraint
         strategy.add_constraint(UniqueValuesConstraint);
@@ -509,34 +534,94 @@ mod tests {
     fn test_tournament_selection() {
         // Create a strategy
         let config = CombinatorialBreedConfig::default();
+        let challenge = TestChallenge::new(15);
         let strategy =
-            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(config);
+            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(
+                config.clone(),
+                challenge,
+            );
 
-        // Create parents
+        // Create parents with different fitness values
+        // The sum of parent1 values is 15, and parent2 is 40
         let parent1 = TestPhenotype {
-            values: vec![1, 2, 3, 4, 5],
+            values: vec![1, 2, 3, 4, 5], // Sum = 15
         };
         let parent2 = TestPhenotype {
-            values: vec![6, 7, 8, 9, 10],
+            values: vec![6, 7, 8, 9, 10], // Sum = 40
         };
-        let parents = vec![parent1, parent2];
+        let parents = vec![parent1.clone(), parent2.clone()];
 
-        // Create RNG
-        let mut rng = RandomNumberGenerator::new();
+        // Create RNG with fixed seed for deterministic testing
+        let mut rng = RandomNumberGenerator::from_seed(42);
 
-        // Select
-        let idx = strategy.tournament_selection(&parents, &mut rng);
+        // Run tournament selection multiple times
+        let mut selected_parent1_count = 0;
+        let mut selected_parent2_count = 0;
 
-        // Check result
-        assert!(idx < parents.len());
+        for _ in 0..100 {
+            // Select
+            let idx = strategy
+                .tournament_selection(&parents, &mut rng)
+                .expect("Tournament selection should not fail");
+
+            // Count which parent was selected
+            if idx == 0 {
+                selected_parent1_count += 1;
+            } else {
+                selected_parent2_count += 1;
+            }
+        }
+
+        // Since parent1 has better fitness (sum=15, target=15), it should be selected more often
+        assert!(selected_parent1_count > selected_parent2_count);
+
+        // Now test with a different target to make parent2 have better fitness
+        let challenge = TestChallenge::new(40);
+        let strategy =
+            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(
+                config, challenge,
+            );
+
+        // Reset counters
+        selected_parent1_count = 0;
+        selected_parent2_count = 0;
+
+        // Reset RNG for deterministic testing
+        let mut rng = RandomNumberGenerator::from_seed(42);
+
+        for _ in 0..100 {
+            // Select
+            let idx = strategy
+                .tournament_selection(&parents, &mut rng)
+                .expect("Tournament selection should not fail");
+
+            // Count which parent was selected
+            if idx == 0 {
+                selected_parent1_count += 1;
+            } else {
+                selected_parent2_count += 1;
+            }
+        }
+
+        // Now parent2 should be selected more often (sum=40, target=40)
+        assert!(selected_parent2_count > selected_parent1_count);
+
+        // Test error handling with empty parents
+        let empty_parents: Vec<TestPhenotype> = Vec::new();
+        let result = strategy.tournament_selection(&empty_parents, &mut rng);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), GeneticError::EmptyPopulation));
     }
 
     #[test]
     fn test_breed_empty_parents() {
         // Create a strategy
         let config = CombinatorialBreedConfig::default();
+        let challenge = TestChallenge::new(15);
         let strategy =
-            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(config);
+            CombinatorialBreedStrategy::<TestPhenotype, HillClimbing, TestChallenge>::new(
+                config, challenge,
+            );
 
         // Create empty parents
         let parents: Vec<TestPhenotype> = Vec::new();
@@ -552,9 +637,6 @@ mod tests {
 
         // Check result
         assert!(result.is_err());
-        match result {
-            Err(crate::error::GeneticError::EmptyPopulation) => (),
-            _ => panic!("Expected EmptyPopulation error"),
-        }
+        assert!(matches!(result.unwrap_err(), GeneticError::EmptyPopulation));
     }
 }
