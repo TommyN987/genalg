@@ -122,7 +122,11 @@ impl TournamentSelection {
     /// # Panics
     ///
     /// Panics if `tournament_size` is 0.
-    pub fn with_options(tournament_size: usize, higher_is_better: bool, allow_duplicates: bool) -> Self {
+    pub fn with_options(
+        tournament_size: usize,
+        higher_is_better: bool,
+        allow_duplicates: bool,
+    ) -> Self {
         assert!(tournament_size > 0, "Tournament size must be at least 1");
         Self {
             tournament_size,
@@ -153,7 +157,7 @@ impl TournamentSelection {
         excluded: &HashSet<usize>,
     ) -> Result<usize> {
         let population_size = fitness.len();
-        
+
         // If all individuals are excluded, return an error
         if excluded.len() >= population_size {
             return Err(GeneticError::Configuration(
@@ -165,7 +169,7 @@ impl TournamentSelection {
         let eligible: Vec<usize> = (0..population_size)
             .filter(|i| !excluded.contains(i))
             .collect();
-        
+
         if eligible.is_empty() {
             return Err(GeneticError::Configuration(
                 "No eligible individuals for tournament selection".to_string(),
@@ -241,9 +245,11 @@ where
         // Tournament selection requires randomness
         let rng = match rng {
             Some(rng) => rng,
-            None => return Err(GeneticError::Configuration(
-                "Tournament selection requires a random number generator".to_string(),
-            )),
+            None => {
+                return Err(GeneticError::Configuration(
+                    "Tournament selection requires a random number generator".to_string(),
+                ))
+            }
         };
 
         let mut selected = Vec::with_capacity(num_to_select);
@@ -308,14 +314,16 @@ mod tests {
             TestPhenotype { value: 4.0 },
             TestPhenotype { value: 5.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
         let mut rng = RandomNumberGenerator::from_seed(42); // Use fixed seed for deterministic testing
-        
+
         // Test with default parameters (tournament size 2)
         let selection = TournamentSelection::default();
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
+
         // Should select 3 individuals
         assert_eq!(selected.len(), 3);
     }
@@ -329,23 +337,29 @@ mod tests {
             TestPhenotype { value: 4.0 },
             TestPhenotype { value: 5.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Test with tournament size 1 (equivalent to random selection)
         let selection = TournamentSelection::new(1);
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 3);
-        
+
         // Test with tournament size equal to population size (equivalent to elitist selection)
         let selection = TournamentSelection::new(5);
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 3);
-        
+
         // Test with large tournament size (greater than population size)
         let selection = TournamentSelection::new(10);
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 3);
     }
 
@@ -358,14 +372,16 @@ mod tests {
             TestPhenotype { value: 4.0 },
             TestPhenotype { value: 5.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1]; // Lower values are better
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Test with lower is better
         let selection = TournamentSelection::with_options(3, false, false);
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
+
         assert_eq!(selected.len(), 5); // Should select all 5 individuals (no duplicates)
     }
 
@@ -376,14 +392,16 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Test with duplicates allowed
         let selection = TournamentSelection::with_duplicates(2, true);
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
+
         assert_eq!(selected.len(), 10); // Should select 10 individuals with duplicates
     }
 
@@ -394,14 +412,16 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Test without duplicates
         let selection = TournamentSelection::with_duplicates(2, false);
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
+
         assert_eq!(selected.len(), 3); // Should only select 3 individuals (no duplicates)
     }
 
@@ -410,26 +430,23 @@ mod tests {
         let population: Vec<TestPhenotype> = Vec::new();
         let fitness: Vec<f64> = Vec::new();
         let mut rng = RandomNumberGenerator::new();
-        
+
         let selection = TournamentSelection::new(2);
         let result = selection.select(&population, &fitness, 3, Some(&mut rng));
-        
+
         assert!(result.is_err());
     }
 
     #[test]
     fn test_tournament_selection_mismatched_lengths() {
-        let population = vec![
-            TestPhenotype { value: 1.0 },
-            TestPhenotype { value: 2.0 },
-        ];
-        
+        let population = vec![TestPhenotype { value: 1.0 }, TestPhenotype { value: 2.0 }];
+
         let fitness = vec![0.5];
         let mut rng = RandomNumberGenerator::new();
-        
+
         let selection = TournamentSelection::new(2);
         let result = selection.select(&population, &fitness, 1, Some(&mut rng));
-        
+
         assert!(result.is_err());
     }
 
@@ -440,13 +457,13 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
-        
+
         // Tournament selection requires an RNG
         let selection = TournamentSelection::new(2);
         let result = selection.select(&population, &fitness, 1, None);
-        
+
         assert!(result.is_err());
     }
 
@@ -462,18 +479,22 @@ mod tests {
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
         let mut rng = RandomNumberGenerator::from_seed(42);
         let excluded = HashSet::new();
-        
+
         // Test with higher is better
         let selection = TournamentSelection::new(2);
-        let winner = selection.run_tournament(&fitness, &mut rng, &excluded).unwrap();
-        
+        let winner = selection
+            .run_tournament(&fitness, &mut rng, &excluded)
+            .unwrap();
+
         // With the fixed seed, we should get a deterministic result
         assert!(winner < fitness.len());
-        
+
         // Test with lower is better
         let selection = TournamentSelection::with_options(2, false, false);
-        let winner = selection.run_tournament(&fitness, &mut rng, &excluded).unwrap();
-        
+        let winner = selection
+            .run_tournament(&fitness, &mut rng, &excluded)
+            .unwrap();
+
         // With the fixed seed, we should get a deterministic result
         assert!(winner < fitness.len());
     }
@@ -482,26 +503,28 @@ mod tests {
     fn test_run_tournament_with_excluded() {
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Exclude all but one individual
         let mut excluded = HashSet::new();
         excluded.insert(0);
         excluded.insert(1);
         excluded.insert(2);
         excluded.insert(4);
-        
+
         let selection = TournamentSelection::new(2);
-        let winner = selection.run_tournament(&fitness, &mut rng, &excluded).unwrap();
-        
+        let winner = selection
+            .run_tournament(&fitness, &mut rng, &excluded)
+            .unwrap();
+
         // Only index 3 is not excluded
         assert_eq!(winner, 3);
-        
+
         // Exclude all individuals
         let mut excluded = HashSet::new();
         for i in 0..fitness.len() {
             excluded.insert(i);
         }
-        
+
         let result = selection.run_tournament(&fitness, &mut rng, &excluded);
         assert!(result.is_err());
     }
