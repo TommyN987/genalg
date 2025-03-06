@@ -290,8 +290,8 @@ where
 
         // Create children through crossover with other parents
         for parent in parents.iter().skip(1) {
-            let mut child = winner_previous_generation.clone();
-            child.crossover(parent);
+                let mut child = winner_previous_generation.clone();
+                child.crossover(parent);
             children_to_develop.push((child, true));
         }
 
@@ -386,7 +386,7 @@ where
 
         // Try to develop the phenotype within bounds
         for attempt in 1..=self.config.max_development_attempts {
-            phenotype.mutate(rng);
+                phenotype.mutate(rng);
 
             if phenotype.is_within_bounds() {
                 return Ok(phenotype);

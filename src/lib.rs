@@ -248,12 +248,16 @@ pub mod evolution;
 pub mod phenotype;
 pub mod rng;
 pub mod strategy;
+pub mod selection;
 
 // Re-export commonly used types for convenience
 pub use error::{GeneticError, OptionExt, Result, ResultExt};
 pub use evolution::{Challenge, EvolutionLauncher, EvolutionOptions, EvolutionResult, LogLevel};
 pub use phenotype::Phenotype;
 pub use rng::ThreadLocalRng;
+pub use selection::{
+    SelectionStrategy, ElitistSelection, TournamentSelection, RouletteWheelSelection, RankBasedSelection,
+};
 pub use strategy::{
     bounded::{BoundedBreedConfig, BoundedBreedStrategy, Magnitude},
     ordinary::OrdinaryStrategy,
