@@ -98,9 +98,9 @@
 //!
 //! ### Selection Strategies
 //!
-//! GenAlg provides several built-in selection strategies:
+//! GenAlg provides several built-in selection strategies for choosing parents based on their fitness:
 //!
-//! 1. [`ElitistSelection`]: Selects the best individuals based on fitness.
+//! 1. [`ElitistSelection`]: Selects the best individuals based on fitness scores.
 //!
 //! 2. [`TournamentSelection`]: Selects individuals through tournament selection.
 //!
@@ -118,7 +118,7 @@
 //!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //!     phenotype::Phenotype,
 //!     rng::RandomNumberGenerator,
-//!     strategy::OrdinaryStrategy,
+//!     strategy::ordinary::OrdinaryStrategy,
 //!     selection::ElitistSelection,
 //! };
 //!
@@ -262,8 +262,8 @@ pub mod error;
 pub mod evolution;
 pub mod phenotype;
 pub mod rng;
-pub mod strategy;
 pub mod selection;
+pub mod strategy;
 
 // Re-export commonly used types for convenience
 pub use error::{GeneticError, OptionExt, Result, ResultExt};
@@ -271,7 +271,8 @@ pub use evolution::{Challenge, EvolutionLauncher, EvolutionOptions, EvolutionRes
 pub use phenotype::Phenotype;
 pub use rng::ThreadLocalRng;
 pub use selection::{
-    SelectionStrategy, ElitistSelection, TournamentSelection, RouletteWheelSelection, RankBasedSelection,
+    ElitistSelection, RankBasedSelection, RouletteWheelSelection, SelectionStrategy,
+    TournamentSelection,
 };
 pub use strategy::{
     bounded::{BoundedBreedConfig, BoundedBreedStrategy, Magnitude},

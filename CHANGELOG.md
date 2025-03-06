@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release of the GenAlg library
-- Core traits: `Phenotype`, `Challenge`, `BreedStrategy`
+- Core traits: `Phenotype`, `Challenge`, `BreedStrategy`, `SelectionStrategy`
 - Breeding strategies: `OrdinaryStrategy` and `BoundedBreedStrategy`
+- Selection strategies: `ElitistSelection`, `TournamentSelection`, `RouletteWheelSelection`, and `RankBasedSelection`
 - Evolution management through `EvolutionLauncher` and `EvolutionOptions`
 - Comprehensive error handling system with custom error types
 - Thread-local random number generation for improved parallel performance
@@ -24,10 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Thread-local RNG implementation to eliminate mutex contention
 - Significant performance improvements for large populations
 - Automatic parallelization threshold configuration
+- Flexible selection strategies for optimizing convergence speed and solution quality
 
 ### Documentation
 - Comprehensive API documentation with examples
 - Performance optimization guidelines
 - Error handling examples
 - Quick start guide
-- Advanced usage examples 
+- Advanced usage examples
+- Selection strategy implementation and customization guides 

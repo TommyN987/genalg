@@ -57,7 +57,11 @@ where
     /// # Returns
     ///
     /// A new `EvolutionLauncher` instance.
-    pub fn new(breed_strategy: BreedStrat, selection_strategy: SelectStrat, challenge: Chall) -> Self {
+    pub fn new(
+        breed_strategy: BreedStrat,
+        selection_strategy: SelectStrat,
+        challenge: Chall,
+    ) -> Self {
         Self {
             breed_strategy,
             selection_strategy,
@@ -251,7 +255,7 @@ where
             }
 
             // Extract phenotypes and scores for selection
-            let population: Vec<Pheno> = candidates.iter().map(|c| c.clone()).collect();
+            let population: Vec<Pheno> = candidates.to_vec();
             let scores: Vec<f64> = fitness.iter().map(|f| f.score).collect();
 
             // Use the selection strategy to select parents for the next generation
@@ -303,7 +307,8 @@ where
     seed: Option<u64>,
 }
 
-impl<Pheno, BreedStrat, SelectStrat, Chall> EvolutionProcess<'_, Pheno, BreedStrat, SelectStrat, Chall>
+impl<Pheno, BreedStrat, SelectStrat, Chall>
+    EvolutionProcess<'_, Pheno, BreedStrat, SelectStrat, Chall>
 where
     Pheno: Phenotype + Send + Sync,
     Chall: Challenge<Pheno> + Send + Sync,
@@ -359,7 +364,8 @@ where
 }
 
 // Add a backward-compatible constructor that uses ElitistSelection as the default
-impl<Pheno, BreedStrat, Chall> EvolutionLauncher<Pheno, BreedStrat, crate::selection::ElitistSelection, Chall>
+impl<Pheno, BreedStrat, Chall>
+    EvolutionLauncher<Pheno, BreedStrat, crate::selection::ElitistSelection, Chall>
 where
     Pheno: Phenotype + Send + Sync,
     Chall: Challenge<Pheno> + Send + Sync,

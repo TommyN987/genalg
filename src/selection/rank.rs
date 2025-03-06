@@ -103,12 +103,12 @@ impl RankBasedSelection {
     ///
     /// Returns a `GeneticError::Configuration` error if `selection_pressure` is not in the range [1.0, 2.0].
     pub fn with_pressure(selection_pressure: f64) -> Result<Self> {
-        if selection_pressure < 1.0 || selection_pressure > 2.0 {
+        if !(1.0..=2.0).contains(&selection_pressure) {
             return Err(GeneticError::Configuration(
                 "Selection pressure must be in the range [1.0, 2.0]".to_string(),
             ));
         }
-        
+
         Ok(Self {
             selection_pressure,
             allow_duplicates: false,
@@ -150,16 +150,16 @@ impl RankBasedSelection {
         higher_is_better: bool,
         allow_duplicates: bool,
     ) -> Result<Self> {
-        if selection_pressure < 1.0 || selection_pressure > 2.0 {
+        if !(1.0..=2.0).contains(&selection_pressure) {
             return Err(GeneticError::Configuration(
                 "Selection pressure must be in the range [1.0, 2.0]".to_string(),
             ));
         }
-        
+
         Ok(Self {
             selection_pressure,
-            allow_duplicates,
             higher_is_better,
+            allow_duplicates,
         })
     }
 
@@ -174,17 +174,17 @@ impl RankBasedSelection {
     /// A vector of cumulative probabilities for each individual.
     fn calculate_probabilities(&self, fitness: &[f64]) -> Vec<f64> {
         let population_size = fitness.len();
-        
+
         // Create a vector of indices
         let mut indices: Vec<usize> = (0..population_size).collect();
-        
+
         // Sort indices by fitness
         if self.higher_is_better {
             // For maximization problems, sort in descending order
             indices.sort_by(|&a, &b| {
                 let fa = fitness[a];
                 let fb = fitness[b];
-                
+
                 // Handle NaN values
                 if fa.is_nan() {
                     return std::cmp::Ordering::Less;
@@ -192,7 +192,7 @@ impl RankBasedSelection {
                 if fb.is_nan() {
                     return std::cmp::Ordering::Greater;
                 }
-                
+
                 // Sort in descending order
                 fb.partial_cmp(&fa).unwrap_or(std::cmp::Ordering::Equal)
             });
@@ -201,7 +201,7 @@ impl RankBasedSelection {
             indices.sort_by(|&a, &b| {
                 let fa = fitness[a];
                 let fb = fitness[b];
-                
+
                 // Handle NaN values
                 if fa.is_nan() {
                     return std::cmp::Ordering::Greater;
@@ -209,32 +209,32 @@ impl RankBasedSelection {
                 if fb.is_nan() {
                     return std::cmp::Ordering::Less;
                 }
-                
+
                 // Sort in ascending order
                 fa.partial_cmp(&fb).unwrap_or(std::cmp::Ordering::Equal)
             });
         }
-        
+
         // Create a map from index to rank
         let mut rank_map = vec![0; population_size];
         for (rank, &idx) in indices.iter().enumerate() {
             rank_map[idx] = rank;
         }
-        
+
         // Calculate probabilities based on rank
         let mut probs: Vec<f64> = Vec::with_capacity(population_size);
         let mut cumulative = 0.0;
-        
-        for i in 0..population_size {
-            let rank = rank_map[i] as f64;
+
+        for &rank in rank_map.iter() {
+            let rank = rank as f64;
             let prob = (2.0 - self.selection_pressure) / population_size as f64
                 + (2.0 * rank * (self.selection_pressure - 1.0))
                     / (population_size as f64 * (population_size as f64 - 1.0));
-            
+
             cumulative += prob;
             probs.push(cumulative);
         }
-        
+
         // Normalize probabilities to ensure they sum to 1.0
         if let Some(last) = probs.last() {
             if *last > 0.0 && (*last - 1.0).abs() > f64::EPSILON {
@@ -244,12 +244,12 @@ impl RankBasedSelection {
                 }
             }
         }
-        
+
         // Ensure the last probability is exactly 1.0
         if let Some(last) = probs.last_mut() {
             *last = 1.0;
         }
-        
+
         probs
     }
 
@@ -327,9 +327,11 @@ where
         // Rank-based selection requires randomness
         let rng = match rng {
             Some(rng) => rng,
-            None => return Err(GeneticError::Configuration(
-                "Rank-based selection requires a random number generator".to_string(),
-            )),
+            None => {
+                return Err(GeneticError::Configuration(
+                    "Rank-based selection requires a random number generator".to_string(),
+                ))
+            }
         };
 
         // Calculate selection probabilities
@@ -363,7 +365,7 @@ where
 mod tests {
     use crate::phenotype::Phenotype;
     use crate::rng::RandomNumberGenerator;
-    
+
     use super::*;
 
     #[derive(Clone, Debug)]
@@ -395,22 +397,30 @@ mod tests {
 
         // Test with default parameters
         let selection = RankBasedSelection::new();
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 3);
 
         // Test with custom selection pressure
         let selection = RankBasedSelection::with_pressure(1.8).unwrap();
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 3);
 
         // Test with duplicates allowed
         let selection = RankBasedSelection::with_duplicates(true);
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 10);
 
         // Test with all options
         let selection = RankBasedSelection::with_options(1.2, false, true).unwrap();
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 10);
     }
 
@@ -427,10 +437,7 @@ mod tests {
 
     #[test]
     fn test_rank_based_selection_mismatched_lengths() {
-        let population = vec![
-            TestPhenotype { value: 1.0 },
-            TestPhenotype { value: 2.0 },
-        ];
+        let population = vec![TestPhenotype { value: 1.0 }, TestPhenotype { value: 2.0 }];
         let fitness = vec![0.5];
         let mut rng = RandomNumberGenerator::new();
 
@@ -450,7 +457,9 @@ mod tests {
         let mut rng = RandomNumberGenerator::new();
 
         let selection = RankBasedSelection::new();
-        let selected = selection.select(&population, &fitness, 2, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 2, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 2);
     }
 
@@ -469,22 +478,24 @@ mod tests {
 
         // Test with minimization (lower is better)
         let selection = RankBasedSelection::with_options(1.5, false, false).unwrap();
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
         assert_eq!(selected.len(), 3);
     }
-    
+
     #[test]
     fn test_invalid_selection_pressure() {
         // Test with selection pressure below minimum
         let result = RankBasedSelection::with_pressure(0.5);
         assert!(result.is_err());
-        
+
         // Test with selection pressure above maximum
         let result = RankBasedSelection::with_pressure(2.5);
         assert!(result.is_err());
-        
+
         // Test with options and invalid selection pressure
         let result = RankBasedSelection::with_options(2.5, true, false);
         assert!(result.is_err());
     }
-} 
+}

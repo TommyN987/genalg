@@ -43,6 +43,7 @@ use genalg::{
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     strategy::OrdinaryStrategy,
+    selection::ElitistSelection,
 };
 
 // Define your phenotype (the solution representation)
@@ -96,10 +97,11 @@ fn main() {
         .parallel_threshold(1000)
         .build();
     let challenge = MyChallenge { target: 42.0 };
-    let strategy = OrdinaryStrategy::default();
+    let breed_strategy = OrdinaryStrategy::default();
+    let selection_strategy = ElitistSelection::default();
     
     // Create and run the evolution
-    let launcher = EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
     let result = launcher
         .configure(options, starting_value)
         .with_seed(42)  // Optional: Set a specific seed
@@ -175,6 +177,95 @@ GenAlg provides two built-in breeding strategies:
 1. **OrdinaryStrategy**: A basic breeding strategy where the first parent is considered the winner of the previous generation.
 
 2. **BoundedBreedStrategy**: Similar to `OrdinaryStrategy` but imposes bounds on phenotypes during evolution.
+
+### Selection Strategies
+
+GenAlg provides several built-in selection strategies for choosing parents based on their fitness:
+
+1. **ElitistSelection**: Selects the best individuals based on fitness scores. This strategy implements elitism, which ensures that the best solutions are preserved across generations.
+
+   ```rust
+   use genalg::selection::ElitistSelection;
+   
+   // Default: higher fitness is better, no duplicates allowed
+   let selection = ElitistSelection::default();
+   
+   // For minimization problems (lower fitness is better)
+   let selection = ElitistSelection::with_options(false, false);
+   
+   // Allow duplicates in selection
+   let selection = ElitistSelection::with_duplicates(true);
+   ```
+
+2. **TournamentSelection**: Randomly selects groups of individuals and picks the best from each group. This provides a balance between exploration and exploitation.
+
+   ```rust
+   use genalg::selection::TournamentSelection;
+   
+   // Tournament size determines selection pressure
+   // Larger size = more pressure toward best individuals
+   let selection = TournamentSelection::new(3);
+   
+   // For minimization problems
+   let selection = TournamentSelection::with_options(3, false, false);
+   ```
+
+3. **RouletteWheelSelection**: Selects individuals with probability proportional to their fitness. Also known as fitness proportionate selection.
+
+   ```rust
+   use genalg::selection::RouletteWheelSelection;
+   
+   // Default: higher fitness is better, no duplicates
+   let selection = RouletteWheelSelection::default();
+   
+   // For minimization problems
+   let selection = RouletteWheelSelection::with_options(false, false);
+   ```
+
+4. **RankBasedSelection**: Selects individuals based on their rank in the population rather than their absolute fitness. This helps prevent premature convergence when there are a few individuals with much higher fitness.
+
+   ```rust
+   use genalg::selection::RankBasedSelection;
+   
+   // Default: selection pressure of 1.5, higher is better
+   let selection = RankBasedSelection::default();
+   
+   // Custom selection pressure (between 1.0 and 2.0)
+   let selection = RankBasedSelection::with_pressure(1.8).unwrap();
+   
+   // For minimization problems
+   let selection = RankBasedSelection::with_options(1.5, false, false).unwrap();
+   ```
+
+You can also implement your own selection strategy by implementing the `SelectionStrategy` trait:
+
+```rust
+use genalg::{
+    error::Result,
+    phenotype::Phenotype,
+    rng::RandomNumberGenerator,
+    selection::SelectionStrategy,
+};
+use std::fmt::Debug;
+
+#[derive(Debug, Clone)]
+struct MyCustomSelection {
+    // Your selection configuration fields
+}
+
+impl<P: Phenotype> SelectionStrategy<P> for MyCustomSelection {
+    fn select(
+        &self,
+        population: &[P],
+        fitness: &[f64],
+        num_to_select: usize,
+        rng: Option<&mut RandomNumberGenerator>,
+    ) -> Result<Vec<P>> {
+        // Implement your custom selection logic here
+        // ...
+    }
+}
+```
 
 ## Advanced Usage
 
@@ -298,10 +389,11 @@ Once you've implemented your custom strategy, you can use it with the `Evolution
 
 ```rust
 // Create your custom strategy
-let strategy = MyCustomStrategy::new(0.8, 0.2);
+let breed_strategy = MyCustomStrategy::new(0.8, 0.2);
+let selection_strategy = ElitistSelection::default();
 
-// Create the launcher with your strategy
-let launcher = EvolutionLauncher::new(strategy, challenge);
+// Create the launcher with your strategies
+let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
 
 // Configure and run the evolution
 let result = launcher

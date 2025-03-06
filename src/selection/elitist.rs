@@ -157,7 +157,7 @@ where
                     Ordering::Equal
                 }
             });
-            
+
             // Reverse the ordering if higher is better
             if self.higher_is_better {
                 cmp.reverse()
@@ -226,14 +226,14 @@ mod tests {
             TestPhenotype { value: 4.0 },
             TestPhenotype { value: 5.0 },
         ];
-        
+
         // Fitness values (not in order of population)
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
-        
+
         // Test with default parameters (higher is better)
         let selection = ElitistSelection::new();
         let selected = selection.select(&population, &fitness, 3, None).unwrap();
-        
+
         // Should select individuals with highest fitness
         assert_eq!(selected.len(), 3);
         // Check that the best individuals were selected (indices 3, 1, 0 with fitness 0.9, 0.8, 0.5)
@@ -251,14 +251,14 @@ mod tests {
             TestPhenotype { value: 4.0 },
             TestPhenotype { value: 5.0 },
         ];
-        
+
         // Fitness values (not in order of population)
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
-        
+
         // Test with lower is better
         let selection = ElitistSelection::with_options(false, false);
         let selected = selection.select(&population, &fitness, 3, None).unwrap();
-        
+
         // Should select individuals with lowest fitness
         assert_eq!(selected.len(), 3);
         // Check that the best individuals were selected (indices 4, 2, 0 with fitness 0.1, 0.3, 0.5)
@@ -274,20 +274,20 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
-        
+
         // Test with duplicates allowed
         let selection = ElitistSelection::with_duplicates(true);
         let selected = selection.select(&population, &fitness, 5, None).unwrap();
-        
+
         // Should select 5 individuals, with duplicates
         assert_eq!(selected.len(), 5);
         // The first 3 should be the original population in order of fitness
         assert!((selected[0].value - 2.0).abs() < f64::EPSILON); // index 1, fitness 0.8
         assert!((selected[1].value - 1.0).abs() < f64::EPSILON); // index 0, fitness 0.5
         assert!((selected[2].value - 3.0).abs() < f64::EPSILON); // index 2, fitness 0.3
-        // The remaining 2 should be duplicates of the best individuals
+                                                                 // The remaining 2 should be duplicates of the best individuals
         assert!((selected[3].value - 2.0).abs() < f64::EPSILON); // duplicate of index 1
         assert!((selected[4].value - 1.0).abs() < f64::EPSILON); // duplicate of index 0
     }
@@ -299,13 +299,13 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
-        
+
         // Test without duplicates
         let selection = ElitistSelection::with_duplicates(false);
         let selected = selection.select(&population, &fitness, 5, None).unwrap();
-        
+
         // Should only select 3 individuals (no duplicates)
         assert_eq!(selected.len(), 3);
         // Should be in order of fitness
@@ -318,25 +318,22 @@ mod tests {
     fn test_elitist_selection_empty_population() {
         let population: Vec<TestPhenotype> = Vec::new();
         let fitness: Vec<f64> = Vec::new();
-        
+
         let selection = ElitistSelection::new();
         let result = selection.select(&population, &fitness, 3, None);
-        
+
         assert!(result.is_err());
     }
 
     #[test]
     fn test_elitist_selection_mismatched_lengths() {
-        let population = vec![
-            TestPhenotype { value: 1.0 },
-            TestPhenotype { value: 2.0 },
-        ];
-        
+        let population = vec![TestPhenotype { value: 1.0 }, TestPhenotype { value: 2.0 }];
+
         let fitness = vec![0.5];
-        
+
         let selection = ElitistSelection::new();
         let result = selection.select(&population, &fitness, 1, None);
-        
+
         assert!(result.is_err());
     }
 
@@ -347,13 +344,13 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, f64::NAN, 0.3];
-        
+
         // Test with NaN values
         let selection = ElitistSelection::new();
         let selected = selection.select(&population, &fitness, 3, None).unwrap();
-        
+
         // NaN values should be sorted last
         assert_eq!(selected.len(), 3);
         assert!((selected[0].value - 1.0).abs() < f64::EPSILON); // index 0, fitness 0.5

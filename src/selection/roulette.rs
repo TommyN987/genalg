@@ -140,7 +140,7 @@ impl RouletteWheelSelection {
                 }
                 f => f + 1.0, // Add 1.0 to ensure all values are positive after inversion
             };
-            
+
             // Invert the fitness: max - fitness
             fitness.iter().map(|&f| max_fitness - f).collect()
         };
@@ -151,7 +151,8 @@ impl RouletteWheelSelection {
         // If the sum is zero, we can't perform roulette wheel selection
         if sum == 0.0 {
             return Err(GeneticError::Configuration(
-                "Roulette wheel selection requires at least one individual with non-zero fitness".to_string(),
+                "Roulette wheel selection requires at least one individual with non-zero fitness"
+                    .to_string(),
             ));
         }
 
@@ -244,9 +245,11 @@ where
         // Roulette wheel selection requires randomness
         let rng = match rng {
             Some(rng) => rng,
-            None => return Err(GeneticError::Configuration(
-                "Roulette wheel selection requires a random number generator".to_string(),
-            )),
+            None => {
+                return Err(GeneticError::Configuration(
+                    "Roulette wheel selection requires a random number generator".to_string(),
+                ))
+            }
         };
 
         // Calculate selection probabilities
@@ -306,14 +309,16 @@ mod tests {
             TestPhenotype { value: 4.0 },
             TestPhenotype { value: 5.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
         let mut rng = RandomNumberGenerator::from_seed(42); // Use fixed seed for deterministic testing
-        
+
         // Test with default parameters
         let selection = RouletteWheelSelection::new();
-        let selected = selection.select(&population, &fitness, 3, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 3, Some(&mut rng))
+            .unwrap();
+
         // Should select 3 individuals
         assert_eq!(selected.len(), 3);
     }
@@ -327,14 +332,16 @@ mod tests {
             TestPhenotype { value: 4.0 },
             TestPhenotype { value: 5.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1]; // Lower values are better
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Test with lower is better
         let selection = RouletteWheelSelection::with_options(false, false);
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
+
         assert_eq!(selected.len(), 5); // Should select all 5 individuals (no duplicates)
     }
 
@@ -345,14 +352,16 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Test with duplicates allowed
         let selection = RouletteWheelSelection::with_duplicates(true);
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
+
         assert_eq!(selected.len(), 10); // Should select 10 individuals with duplicates
     }
 
@@ -363,14 +372,16 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         // Test without duplicates
         let selection = RouletteWheelSelection::with_duplicates(false);
-        let selected = selection.select(&population, &fitness, 10, Some(&mut rng)).unwrap();
-        
+        let selected = selection
+            .select(&population, &fitness, 10, Some(&mut rng))
+            .unwrap();
+
         assert_eq!(selected.len(), 3); // Should only select 3 individuals (no duplicates)
     }
 
@@ -379,26 +390,23 @@ mod tests {
         let population: Vec<TestPhenotype> = Vec::new();
         let fitness: Vec<f64> = Vec::new();
         let mut rng = RandomNumberGenerator::new();
-        
+
         let selection = RouletteWheelSelection::new();
         let result = selection.select(&population, &fitness, 3, Some(&mut rng));
-        
+
         assert!(result.is_err());
     }
 
     #[test]
     fn test_roulette_wheel_selection_mismatched_lengths() {
-        let population = vec![
-            TestPhenotype { value: 1.0 },
-            TestPhenotype { value: 2.0 },
-        ];
-        
+        let population = vec![TestPhenotype { value: 1.0 }, TestPhenotype { value: 2.0 }];
+
         let fitness = vec![0.5];
         let mut rng = RandomNumberGenerator::new();
-        
+
         let selection = RouletteWheelSelection::new();
         let result = selection.select(&population, &fitness, 1, Some(&mut rng));
-        
+
         assert!(result.is_err());
     }
 
@@ -409,13 +417,13 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, 0.8, 0.3];
-        
+
         // Roulette wheel selection requires an RNG
         let selection = RouletteWheelSelection::new();
         let result = selection.select(&population, &fitness, 1, None);
-        
+
         assert!(result.is_err());
     }
 
@@ -426,13 +434,13 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.5, -0.8, 0.3]; // Contains negative fitness
         let mut rng = RandomNumberGenerator::new();
-        
+
         let selection = RouletteWheelSelection::new();
         let result = selection.select(&population, &fitness, 1, Some(&mut rng));
-        
+
         assert!(result.is_err());
     }
 
@@ -443,45 +451,45 @@ mod tests {
             TestPhenotype { value: 2.0 },
             TestPhenotype { value: 3.0 },
         ];
-        
+
         let fitness = vec![0.0, 0.0, 0.0]; // All zero fitness
         let mut rng = RandomNumberGenerator::new();
-        
+
         let selection = RouletteWheelSelection::new();
         let result = selection.select(&population, &fitness, 1, Some(&mut rng));
-        
+
         assert!(result.is_err());
     }
 
     #[test]
     fn test_calculate_probabilities() {
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
-        
+
         // Test with higher is better
         let selection = RouletteWheelSelection::new();
         let probs = selection.calculate_probabilities(&fitness).unwrap();
-        
+
         // Should have the same length as fitness
         assert_eq!(probs.len(), fitness.len());
-        
+
         // Probabilities should be cumulative and the last one should be 1.0
         assert!((probs[probs.len() - 1] - 1.0).abs() < f64::EPSILON);
-        
+
         // Probabilities should be in ascending order
         for i in 1..probs.len() {
             assert!(probs[i] >= probs[i - 1]);
         }
-        
+
         // Test with lower is better
         let selection = RouletteWheelSelection::with_options(false, false);
         let probs = selection.calculate_probabilities(&fitness).unwrap();
-        
+
         // Should have the same length as fitness
         assert_eq!(probs.len(), fitness.len());
-        
+
         // Probabilities should be cumulative and the last one should be 1.0
         assert!((probs[probs.len() - 1] - 1.0).abs() < f64::EPSILON);
-        
+
         // Probabilities should be in ascending order
         for i in 1..probs.len() {
             assert!(probs[i] >= probs[i - 1]);
@@ -492,11 +500,11 @@ mod tests {
     fn test_select_individual() {
         let probs = vec![0.2, 0.5, 0.8, 1.0];
         let mut rng = RandomNumberGenerator::from_seed(42);
-        
+
         let selection = RouletteWheelSelection::new();
         let idx = selection.select_individual(&probs, &mut rng).unwrap();
-        
+
         // With the fixed seed, we should get a deterministic result
         assert!(idx < probs.len());
     }
-} 
+}
