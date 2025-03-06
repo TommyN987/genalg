@@ -3,8 +3,8 @@
 //! The `BreedStrategy` trait defines the interface for strategies responsible for breeding
 //! new individuals (phenotypes) based on a set of parent individuals and evolution options.
 pub mod bounded;
-pub mod ordinary;
 pub mod combinatorial;
+pub mod ordinary;
 
 use std::fmt::Debug;
 
