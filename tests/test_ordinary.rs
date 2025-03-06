@@ -56,8 +56,7 @@ fn test_ordinary() {
     let options = EvolutionOptions::default();
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = OrdinaryStrategy::default();
-    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
-        EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
     let winner = launcher.configure(options, starting_value).run().unwrap();
     assert!((winner.pheno.get_x() - 2.0).abs() < 1e-2);
 }
@@ -69,8 +68,7 @@ fn test_ordinary_with_invalid_options() {
     let options = EvolutionOptions::new(100, genalg::evolution::LogLevel::None, 0, 20);
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = OrdinaryStrategy::default();
-    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
-        EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
 
     let result = launcher.configure(options, starting_value).run();
     assert!(result.is_err());
@@ -100,8 +98,7 @@ fn test_ordinary_with_empty_parents() {
 
     let challenge = EmptyChallenge;
     let strategy = OrdinaryStrategy::default();
-    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, EmptyChallenge> =
-        EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
 
     // This should not panic, but return an error
     let result = launcher.configure(options, starting_value).run();
@@ -117,8 +114,7 @@ fn test_ordinary_strategy() {
     let options = EvolutionOptions::new(100, LogLevel::None, 10, 50);
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = OrdinaryStrategy::default();
-    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
-        EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
     let winner = launcher
         .configure(options, starting_value)
         .with_seed(42)
@@ -133,8 +129,7 @@ fn test_ordinary_strategy_error() {
     let options = EvolutionOptions::new(100, LogLevel::None, 0, 50);
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = OrdinaryStrategy::default();
-    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
-        EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
     let result = launcher
         .configure(options, starting_value)
         .with_seed(42)
@@ -148,8 +143,7 @@ fn test_ordinary_strategy_error_offspring() {
     let options = EvolutionOptions::new(100, LogLevel::None, 10, 0);
     let challenge = XCoordinateChallenge::new(2.0);
     let strategy = OrdinaryStrategy::default();
-    let launcher: EvolutionLauncher<XCoordinate, OrdinaryStrategy, XCoordinateChallenge> =
-        EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
     let result = launcher
         .configure(options, starting_value)
         .with_seed(42)

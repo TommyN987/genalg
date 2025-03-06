@@ -139,7 +139,7 @@
 //!     let strategy = OrdinaryStrategy::default();
 //!     
 //!     // Run the evolution, handling potential errors
-//!     let launcher = EvolutionLauncher::new(strategy, challenge);
+//!     let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
 //!     let result = launcher
 //!         .configure(options, starting_value)
 //!         .run()?;

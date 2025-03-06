@@ -10,6 +10,7 @@ use crate::{
     error::{GeneticError, OptionExt, Result},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
+    selection::SelectionStrategy,
     strategy::BreedStrategy,
 };
 use rayon::prelude::*;
@@ -23,38 +24,43 @@ pub struct EvolutionResult<Pheno: Phenotype> {
     pub score: f64,
 }
 
-/// Manages the evolution process using a specified breeding strategy and challenge.
+/// Manages the evolution process using a specified breeding strategy, selection strategy, and challenge.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct EvolutionLauncher<Pheno, Strategy, Chall>
+pub struct EvolutionLauncher<Pheno, BreedStrat, SelectStrat, Chall>
 where
     Pheno: Phenotype,
     Chall: Challenge<Pheno>,
-    Strategy: BreedStrategy<Pheno>,
+    BreedStrat: BreedStrategy<Pheno>,
+    SelectStrat: SelectionStrategy<Pheno>,
 {
-    strategy: Strategy,
+    breed_strategy: BreedStrat,
+    selection_strategy: SelectStrat,
     challenge: Chall,
     _marker: PhantomData<Pheno>,
 }
 
-impl<Pheno, Strategy, Chall> EvolutionLauncher<Pheno, Strategy, Chall>
+impl<Pheno, BreedStrat, SelectStrat, Chall> EvolutionLauncher<Pheno, BreedStrat, SelectStrat, Chall>
 where
     Pheno: Phenotype + Send + Sync,
     Chall: Challenge<Pheno> + Send + Sync,
-    Strategy: BreedStrategy<Pheno>,
+    BreedStrat: BreedStrategy<Pheno>,
+    SelectStrat: SelectionStrategy<Pheno>,
 {
-    /// Creates a new `EvolutionLauncher` instance with the specified breeding strategy and challenge.
+    /// Creates a new `EvolutionLauncher` instance with the specified breeding strategy, selection strategy, and challenge.
     ///
     /// # Arguments
     ///
-    /// * `strategy` - The breeding strategy used for generating offspring during evolution.
+    /// * `breed_strategy` - The breeding strategy used for generating offspring during evolution.
+    /// * `selection_strategy` - The selection strategy used for selecting parents for the next generation.
     /// * `challenge` - The challenge used to evaluate the fitness of phenotypes.
     ///
     /// # Returns
     ///
     /// A new `EvolutionLauncher` instance.
-    pub fn new(strategy: Strategy, challenge: Chall) -> Self {
+    pub fn new(breed_strategy: BreedStrat, selection_strategy: SelectStrat, challenge: Chall) -> Self {
         Self {
-            strategy,
+            breed_strategy,
+            selection_strategy,
             challenge,
             _marker: PhantomData,
         }
@@ -82,6 +88,7 @@ where
     /// #     phenotype::Phenotype,
     /// #     rng::RandomNumberGenerator,
     /// #     strategy::OrdinaryStrategy,
+    /// #     selection::ElitistSelection,
     /// # };
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
@@ -97,11 +104,12 @@ where
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, phenotype: &MyPhenotype) -> f64 { 1.0 / (phenotype.value - self.target).abs().max(0.001) }
     /// # }
-    /// # let strategy = OrdinaryStrategy::default();
+    /// # let breed_strategy = OrdinaryStrategy::default();
+    /// # let selection_strategy = ElitistSelection::default();
     /// # let challenge = MyChallenge { target: 42.0 };
     /// # let options = EvolutionOptions::default();
     /// # let starting_value = MyPhenotype { value: 0.0 };
-    /// let launcher = EvolutionLauncher::new(strategy, challenge);
+    /// let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
     /// let result = launcher
     ///     .configure(options, starting_value)
     ///     .with_seed(42)  // Optional: Set a specific seed
@@ -111,7 +119,7 @@ where
         &self,
         options: EvolutionOptions,
         starting_value: Pheno,
-    ) -> EvolutionProcess<'_, Pheno, Strategy, Chall> {
+    ) -> EvolutionProcess<'_, Pheno, BreedStrat, SelectStrat, Chall> {
         EvolutionProcess {
             launcher: self,
             options,
@@ -160,7 +168,7 @@ where
         for generation in 0..options.get_num_generations() {
             candidates.clear();
 
-            match self.strategy.breed(&parents, options, rng) {
+            match self.breed_strategy.breed(&parents, options, rng) {
                 Ok(bred_candidates) => candidates.extend(bred_candidates),
                 Err(e) => {
                     return Err(GeneticError::Breeding(format!(
@@ -218,20 +226,6 @@ where
                 }
             }
 
-            // Sort by fitness (descending)
-            fitness.sort_by(|a, b| {
-                b.score.partial_cmp(&a.score).unwrap_or_else(|| {
-                    // Handle NaN values by considering them less than any other value
-                    if b.score.is_nan() {
-                        std::cmp::Ordering::Less
-                    } else if a.score.is_nan() {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                })
-            });
-
             // Log progress if requested
             match options.get_log_level() {
                 LogLevel::Info => info!(generation, "Evolution progress"),
@@ -256,15 +250,33 @@ where
                 )));
             }
 
-            // Select parents for the next generation
-            parents.clear();
-            fitness
-                .iter()
-                .take(options.get_population_size())
-                .for_each(|fitness_result| parents.push(fitness_result.pheno.clone()));
+            // Extract phenotypes and scores for selection
+            let population: Vec<Pheno> = candidates.iter().map(|c| c.clone()).collect();
+            let scores: Vec<f64> = fitness.iter().map(|f| f.score).collect();
+
+            // Use the selection strategy to select parents for the next generation
+            parents = self.selection_strategy.select(
+                &population,
+                &scores,
+                options.get_population_size(),
+                Some(rng),
+            )?;
         }
 
         // Return the best result
+        fitness.sort_by(|a, b| {
+            b.score.partial_cmp(&a.score).unwrap_or_else(|| {
+                // Handle NaN values by considering them less than any other value
+                if b.score.is_nan() {
+                    std::cmp::Ordering::Less
+                } else if a.score.is_nan() {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            })
+        });
+
         fitness.first().cloned().ok_or_else_genetic(|| {
             GeneticError::Evolution(
                 "Evolution completed but no viable candidates were produced".to_string(),
@@ -278,23 +290,25 @@ where
 /// This struct is created by the `configure` method on `EvolutionLauncher`
 /// and provides a fluent interface for running the evolution process.
 /// It is not meant to be constructed directly by users.
-pub struct EvolutionProcess<'a, Pheno, Strategy, Chall>
+pub struct EvolutionProcess<'a, Pheno, BreedStrat, SelectStrat, Chall>
 where
     Pheno: Phenotype,
     Chall: Challenge<Pheno>,
-    Strategy: BreedStrategy<Pheno>,
+    BreedStrat: BreedStrategy<Pheno>,
+    SelectStrat: SelectionStrategy<Pheno>,
 {
-    launcher: &'a EvolutionLauncher<Pheno, Strategy, Chall>,
+    launcher: &'a EvolutionLauncher<Pheno, BreedStrat, SelectStrat, Chall>,
     options: EvolutionOptions,
     starting_value: Pheno,
     seed: Option<u64>,
 }
 
-impl<Pheno, Strategy, Chall> EvolutionProcess<'_, Pheno, Strategy, Chall>
+impl<Pheno, BreedStrat, SelectStrat, Chall> EvolutionProcess<'_, Pheno, BreedStrat, SelectStrat, Chall>
 where
     Pheno: Phenotype + Send + Sync,
     Chall: Challenge<Pheno> + Send + Sync,
-    Strategy: BreedStrategy<Pheno>,
+    BreedStrat: BreedStrategy<Pheno>,
+    SelectStrat: SelectionStrategy<Pheno>,
 {
     /// Sets a specific seed for the random number generator.
     ///
@@ -341,5 +355,36 @@ where
 
         self.launcher
             .evolve(&self.options, self.starting_value, &mut rng)
+    }
+}
+
+// Add a backward-compatible constructor that uses ElitistSelection as the default
+impl<Pheno, BreedStrat, Chall> EvolutionLauncher<Pheno, BreedStrat, crate::selection::ElitistSelection, Chall>
+where
+    Pheno: Phenotype + Send + Sync,
+    Chall: Challenge<Pheno> + Send + Sync,
+    BreedStrat: BreedStrategy<Pheno>,
+{
+    /// Creates a new `EvolutionLauncher` instance with the specified breeding strategy and challenge,
+    /// using `ElitistSelection` as the default selection strategy.
+    ///
+    /// This method is provided for backward compatibility with code that was written before
+    /// selection strategies were added to the launcher.
+    ///
+    /// # Arguments
+    ///
+    /// * `breed_strategy` - The breeding strategy used for generating offspring during evolution.
+    /// * `challenge` - The challenge used to evaluate the fitness of phenotypes.
+    ///
+    /// # Returns
+    ///
+    /// A new `EvolutionLauncher` instance with `ElitistSelection` as the selection strategy.
+    pub fn with_default_selection(breed_strategy: BreedStrat, challenge: Chall) -> Self {
+        Self {
+            breed_strategy,
+            selection_strategy: crate::selection::ElitistSelection::default(),
+            challenge,
+            _marker: PhantomData,
+        }
     }
 }
