@@ -4,6 +4,7 @@ use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
+    selection::ElitistSelection,
     strategy::{BoundedBreedStrategy, Magnitude, OrdinaryStrategy},
 };
 use rayon::prelude::*;
@@ -251,13 +252,14 @@ fn bench_evolution_strategies(c: &mut Criterion) {
         let starting_value = XCoordinate::new(5.0);
         let evol_options = EvolutionOptions::new(10, LogLevel::None, 10, *size);
         let challenge = XCoordinateChallenge::new(2.0);
+        let selection_strategy = ElitistSelection::default();
 
         let ordinary_strategy = OrdinaryStrategy::default();
-        let ordinary_launcher: EvolutionLauncher<
-            XCoordinate,
-            OrdinaryStrategy,
-            XCoordinateChallenge,
-        > = EvolutionLauncher::new(ordinary_strategy, challenge.clone());
+        let ordinary_launcher = EvolutionLauncher::new(
+            ordinary_strategy,
+            selection_strategy.clone(),
+            challenge.clone(),
+        );
 
         group.bench_with_input(
             BenchmarkId::new("ordinary", size),
@@ -274,11 +276,11 @@ fn bench_evolution_strategies(c: &mut Criterion) {
         );
 
         let bounded_strategy = BoundedBreedStrategy::default();
-        let bounded_launcher: EvolutionLauncher<
-            XCoordinate,
-            BoundedBreedStrategy<XCoordinate>,
-            XCoordinateChallenge,
-        > = EvolutionLauncher::new(bounded_strategy, challenge.clone());
+        let bounded_launcher = EvolutionLauncher::new(
+            bounded_strategy,
+            selection_strategy.clone(),
+            challenge.clone(),
+        );
 
         group.bench_with_input(
             BenchmarkId::new("bounded", size),
