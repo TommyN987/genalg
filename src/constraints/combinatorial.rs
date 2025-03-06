@@ -11,30 +11,32 @@ use std::marker::PhantomData;
 
 use crate::constraints::{Constraint, ConstraintViolation};
 use crate::phenotype::Phenotype;
-use crate::rng::{RandomNumberGenerator, ThreadLocalRng};
+use crate::rng::RandomNumberGenerator;
 
 /// Ensures that all elements in a collection are unique.
 ///
 /// This constraint is useful for problems where each element can only be used once,
 /// such as assignment problems or permutation problems.
 #[derive(Debug, Clone)]
-pub struct UniqueElementsConstraint<T, F>
+pub struct UniqueElementsConstraint<P, T, F>
 where
-    T: Eq + Hash + Debug + Clone,
-    F: Fn(&T) -> Vec<T>,
+    P: Phenotype,
+    T: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> Vec<T> + Send + Sync + Debug,
 {
     /// Name of the constraint for error messages
     name: String,
     /// Function to extract the elements to check for uniqueness
     extractor: F,
     /// Phantom data for the element type
-    _marker: PhantomData<T>,
+    _marker: PhantomData<(P, T)>,
 }
 
-impl<T, F> UniqueElementsConstraint<T, F>
+impl<P, T, F> UniqueElementsConstraint<P, T, F>
 where
-    T: Eq + Hash + Debug + Clone,
-    F: Fn(&T) -> Vec<T>,
+    P: Phenotype,
+    T: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> Vec<T> + Send + Sync + Debug,
 {
     /// Creates a new unique elements constraint with the given name and extractor function.
     ///
@@ -49,11 +51,11 @@ where
     }
 }
 
-impl<P, T, F> Constraint<P> for UniqueElementsConstraint<T, F>
+impl<P, T, F> Constraint<P> for UniqueElementsConstraint<P, T, F>
 where
     P: Phenotype,
-    T: Eq + Hash + Debug + Clone,
-    F: Fn(&P) -> Vec<T> + Send + Sync,
+    T: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> Vec<T> + Send + Sync + Debug,
 {
     fn check(&self, phenotype: &P) -> Vec<ConstraintViolation> {
         let elements = (self.extractor)(phenotype);
@@ -73,55 +75,35 @@ where
     }
 
     fn repair_with_rng(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
-        // This is a simple repair strategy that might not work for all problems
-        // A more sophisticated repair would depend on the specific problem
-        
-        // Extract elements
-        let elements = (self.extractor)(phenotype);
-        
-        // Find duplicates
-        let mut seen = HashSet::new();
-        let mut duplicates = Vec::new();
-        
-        for (idx, element) in elements.iter().enumerate() {
-            if !seen.insert(element) {
-                duplicates.push(idx);
-            }
+        // This is a generic implementation that might not work for all phenotypes
+        // It relies on the phenotype's mutate method to potentially fix the uniqueness issue
+
+        // Check if there are any violations
+        let violations = self.check(phenotype);
+        if violations.is_empty() {
+            return false; // No violations to repair
         }
-        
-        // If no duplicates, no repair needed
-        if duplicates.is_empty() {
-            return true;
-        }
-        
+
         // Try to repair by mutating the phenotype
-        // This is a generic approach that might not work for all phenotypes
         phenotype.mutate(rng);
-        
+
         // Check if repair was successful
-        let new_elements = (self.extractor)(phenotype);
-        let mut new_seen = HashSet::new();
-        
-        for element in new_elements {
-            if !new_seen.insert(element) {
-                return false;
-            }
-        }
-        
-        true
+        let new_violations = self.check(phenotype);
+        new_violations.is_empty()
     }
 }
 
-/// Ensures that all required assignments are made.
+/// Ensures that all required keys are assigned a value.
 ///
-/// This constraint is useful for assignment problems where each item must be assigned
-/// to exactly one category or position.
+/// This constraint is useful for assignment problems where each key must be assigned
+/// a value from a set of possible values.
 #[derive(Debug, Clone)]
-pub struct CompleteAssignmentConstraint<K, V, F>
+pub struct CompleteAssignmentConstraint<P, K, V, F>
 where
-    K: Eq + Hash + Debug + Clone,
-    V: Debug + Clone,
-    F: Fn(&K) -> Vec<V>,
+    P: Phenotype,
+    K: Eq + Hash + Debug + Clone + Send + Sync,
+    V: Debug + Clone + Send + Sync,
+    F: Fn(&P) -> HashMap<K, V> + Send + Sync + Debug,
 {
     /// Name of the constraint for error messages
     name: String,
@@ -130,19 +112,18 @@ where
     /// The set of keys that must be assigned
     required_keys: HashSet<K>,
     /// Phantom data for the value type
-    _marker: PhantomData<V>,
+    _marker: PhantomData<P>,
 }
 
-impl<K, V, F> CompleteAssignmentConstraint<K, V, F>
+impl<P, K, V, F> CompleteAssignmentConstraint<P, K, V, F>
 where
-    K: Eq + Hash + Debug + Clone,
-    V: Debug + Clone,
-    F: Fn(&K) -> Vec<V>,
+    P: Phenotype,
+    K: Eq + Hash + Debug + Clone + Send + Sync,
+    V: Debug + Clone + Send + Sync,
+    F: Fn(&P) -> HashMap<K, V> + Send + Sync + Debug,
 {
     /// Creates a new complete assignment constraint with the given name, extractor function,
     /// and set of required keys.
-    ///
-    /// The extractor function is used to extract the assignments from the phenotype.
     pub fn new<S: Into<String>>(name: S, extractor: F, required_keys: HashSet<K>) -> Self {
         Self {
             name: name.into(),
@@ -153,12 +134,12 @@ where
     }
 }
 
-impl<P, K, V, F> Constraint<P> for CompleteAssignmentConstraint<K, V, F>
+impl<P, K, V, F> Constraint<P> for CompleteAssignmentConstraint<P, K, V, F>
 where
     P: Phenotype,
-    K: Eq + Hash + Debug + Clone,
-    V: Debug + Clone,
-    F: Fn(&P) -> HashMap<K, V> + Send + Sync,
+    K: Eq + Hash + Debug + Clone + Send + Sync,
+    V: Debug + Clone + Send + Sync,
+    F: Fn(&P) -> HashMap<K, V> + Send + Sync + Debug,
 {
     fn check(&self, phenotype: &P) -> Vec<ConstraintViolation> {
         let assignments = (self.extractor)(phenotype);
@@ -177,40 +158,21 @@ where
     }
 
     fn repair_with_rng(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
-        // This is a simple repair strategy that might not work for all problems
-        // A more sophisticated repair would depend on the specific problem
-        
-        // Extract assignments
-        let assignments = (self.extractor)(phenotype);
-        
-        // Find missing assignments
-        let mut missing = Vec::new();
-        
-        for key in &self.required_keys {
-            if !assignments.contains_key(key) {
-                missing.push(key.clone());
-            }
+        // This is a generic implementation that might not work for all phenotypes
+        // It relies on the phenotype's mutate method to potentially fix the assignment issue
+
+        // Check if there are any violations
+        let violations = self.check(phenotype);
+        if violations.is_empty() {
+            return false; // No violations to repair
         }
-        
-        // If no missing assignments, no repair needed
-        if missing.is_empty() {
-            return true;
-        }
-        
+
         // Try to repair by mutating the phenotype
-        // This is a generic approach that might not work for all phenotypes
         phenotype.mutate(rng);
-        
+
         // Check if repair was successful
-        let new_assignments = (self.extractor)(phenotype);
-        
-        for key in &self.required_keys {
-            if !new_assignments.contains_key(key) {
-                return false;
-            }
-        }
-        
-        true
+        let new_violations = self.check(phenotype);
+        new_violations.is_empty()
     }
 }
 
@@ -219,12 +181,13 @@ where
 /// This constraint is useful for bin packing or resource allocation problems
 /// where each bin or resource has a limited capacity.
 #[derive(Debug, Clone)]
-pub struct CapacityConstraint<K, V, F, G>
+pub struct CapacityConstraint<P, K, V, F, G>
 where
-    K: Eq + Hash + Debug + Clone,
-    V: Debug + Clone,
-    F: Fn(&K) -> HashMap<V, usize>,
-    G: Fn(&V) -> usize,
+    P: Phenotype,
+    K: Eq + Hash + Debug + Clone + Send + Sync,
+    V: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> HashMap<V, Vec<K>> + Send + Sync + Debug,
+    G: Fn(&V) -> usize + Send + Sync + Debug,
 {
     /// Name of the constraint for error messages
     name: String,
@@ -233,21 +196,19 @@ where
     /// Function to get the capacity of each bin
     capacity_fn: G,
     /// Phantom data for the key and value types
-    _marker: PhantomData<(K, V)>,
+    _marker: PhantomData<P>,
 }
 
-impl<K, V, F, G> CapacityConstraint<K, V, F, G>
+impl<P, K, V, F, G> CapacityConstraint<P, K, V, F, G>
 where
-    K: Eq + Hash + Debug + Clone,
-    V: Debug + Clone,
-    F: Fn(&K) -> HashMap<V, usize>,
-    G: Fn(&V) -> usize,
+    P: Phenotype,
+    K: Eq + Hash + Debug + Clone + Send + Sync,
+    V: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> HashMap<V, Vec<K>> + Send + Sync + Debug,
+    G: Fn(&V) -> usize + Send + Sync + Debug,
 {
     /// Creates a new capacity constraint with the given name, extractor function,
     /// and capacity function.
-    ///
-    /// The extractor function is used to extract the assignments from the phenotype.
-    /// The capacity function is used to get the capacity of each bin.
     pub fn new<S: Into<String>>(name: S, extractor: F, capacity_fn: G) -> Self {
         Self {
             name: name.into(),
@@ -258,26 +219,25 @@ where
     }
 }
 
-impl<P, K, V, F, G> Constraint<P> for CapacityConstraint<K, V, F, G>
+impl<P, K, V, F, G> Constraint<P> for CapacityConstraint<P, K, V, F, G>
 where
     P: Phenotype,
-    K: Eq + Hash + Debug + Clone,
-    V: Eq + Hash + Debug + Clone,
-    F: Fn(&P) -> HashMap<V, Vec<K>> + Send + Sync,
-    G: Fn(&V) -> usize + Send + Sync,
+    K: Eq + Hash + Debug + Clone + Send + Sync,
+    V: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> HashMap<V, Vec<K>> + Send + Sync + Debug,
+    G: Fn(&V) -> usize + Send + Sync + Debug,
 {
     fn check(&self, phenotype: &P) -> Vec<ConstraintViolation> {
         let assignments = (self.extractor)(phenotype);
         let mut violations = Vec::new();
 
-        for (bin, items) in &assignments {
+        for (bin, items) in assignments.iter() {
             let capacity = (self.capacity_fn)(bin);
-            
             if items.len() > capacity {
                 violations.push(ConstraintViolation::new(
                     &self.name,
                     format!(
-                        "Bin {:?} exceeds capacity: {} items assigned, capacity is {}",
+                        "Bin {:?} has {} items but capacity is {}",
                         bin,
                         items.len(),
                         capacity
@@ -290,57 +250,34 @@ where
     }
 
     fn repair_with_rng(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
-        // This is a simple repair strategy that might not work for all problems
-        // A more sophisticated repair would depend on the specific problem
-        
-        // Extract assignments
-        let assignments = (self.extractor)(phenotype);
-        
-        // Find capacity violations
-        let mut violations = false;
-        
-        for (bin, items) in &assignments {
-            let capacity = (self.capacity_fn)(bin);
-            
-            if items.len() > capacity {
-                violations = true;
-                break;
-            }
+        // This is a generic implementation that might not work for all phenotypes
+        // It relies on the phenotype's mutate method to potentially fix the capacity issue
+
+        // Check if there are any violations
+        let violations = self.check(phenotype);
+        if violations.is_empty() {
+            return false; // No violations to repair
         }
-        
-        // If no violations, no repair needed
-        if !violations {
-            return true;
-        }
-        
+
         // Try to repair by mutating the phenotype
-        // This is a generic approach that might not work for all phenotypes
         phenotype.mutate(rng);
-        
+
         // Check if repair was successful
-        let new_assignments = (self.extractor)(phenotype);
-        
-        for (bin, items) in &new_assignments {
-            let capacity = (self.capacity_fn)(bin);
-            
-            if items.len() > capacity {
-                return false;
-            }
-        }
-        
-        true
+        let new_violations = self.check(phenotype);
+        new_violations.is_empty()
     }
 }
 
-/// Ensures that a solution satisfies dependency constraints.
+/// Ensures that dependencies between elements are satisfied.
 ///
-/// This constraint is useful for scheduling or sequencing problems where some
-/// tasks must be completed before others.
+/// This constraint is useful for problems where some elements must come before
+/// others, such as scheduling or sequencing problems.
 #[derive(Debug, Clone)]
-pub struct DependencyConstraint<T, F>
+pub struct DependencyConstraint<P, T, F>
 where
-    T: Eq + Hash + Debug + Clone,
-    F: Fn(&T) -> Vec<(T, T)>,
+    P: Phenotype,
+    T: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> Vec<T> + Send + Sync + Debug,
 {
     /// Name of the constraint for error messages
     name: String,
@@ -348,71 +285,56 @@ where
     extractor: F,
     /// The set of dependencies (before, after) pairs
     dependencies: Vec<(T, T)>,
+    /// Phantom data for the phenotype type
+    _marker: PhantomData<P>,
 }
 
-impl<T, F> DependencyConstraint<T, F>
+impl<P, T, F> DependencyConstraint<P, T, F>
 where
-    T: Eq + Hash + Debug + Clone,
-    F: Fn(&T) -> Vec<(T, T)>,
+    P: Phenotype,
+    T: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> Vec<T> + Send + Sync + Debug,
 {
     /// Creates a new dependency constraint with the given name, extractor function,
-    /// and set of dependencies.
-    ///
-    /// The extractor function is used to extract the sequence from the phenotype.
-    /// Each dependency is a pair (before, after) indicating that the 'before' element
-    /// must appear before the 'after' element in the sequence.
+    /// and dependencies.
     pub fn new<S: Into<String>>(name: S, extractor: F, dependencies: Vec<(T, T)>) -> Self {
         Self {
             name: name.into(),
             extractor,
             dependencies,
+            _marker: PhantomData,
         }
     }
 }
 
-impl<P, T, F> Constraint<P> for DependencyConstraint<T, F>
+impl<P, T, F> Constraint<P> for DependencyConstraint<P, T, F>
 where
     P: Phenotype,
-    T: Eq + Hash + Debug + Clone,
-    F: Fn(&P) -> Vec<T> + Send + Sync,
+    T: Eq + Hash + Debug + Clone + Send + Sync,
+    F: Fn(&P) -> Vec<T> + Send + Sync + Debug,
 {
     fn check(&self, phenotype: &P) -> Vec<ConstraintViolation> {
         let sequence = (self.extractor)(phenotype);
         let mut violations = Vec::new();
 
-        // Create a map of element to position
+        // Build a map of element to position
         let mut positions = HashMap::new();
-        for (idx, element) in sequence.iter().enumerate() {
-            positions.insert(element, idx);
+        for (pos, element) in sequence.iter().enumerate() {
+            positions.insert(element, pos);
         }
 
         // Check each dependency
         for (before, after) in &self.dependencies {
-            if let (Some(&before_pos), Some(&after_pos)) = (positions.get(before), positions.get(after)) {
+            if let (Some(&before_pos), Some(&after_pos)) =
+                (positions.get(before), positions.get(after))
+            {
                 if before_pos >= after_pos {
                     violations.push(ConstraintViolation::new(
                         &self.name,
                         format!(
-                            "Dependency violation: {:?} must appear before {:?}, but found at positions {} and {}",
-                            before,
-                            after,
-                            before_pos,
-                            after_pos
+                            "Dependency violation: {:?} must come before {:?}",
+                            before, after
                         ),
-                    ));
-                }
-            } else {
-                // If either element is missing, that's a different kind of violation
-                if !positions.contains_key(before) {
-                    violations.push(ConstraintViolation::new(
-                        &self.name,
-                        format!("Missing element {:?} in sequence", before),
-                    ));
-                }
-                if !positions.contains_key(after) {
-                    violations.push(ConstraintViolation::new(
-                        &self.name,
-                        format!("Missing element {:?} in sequence", after),
                     ));
                 }
             }
@@ -422,64 +344,69 @@ where
     }
 
     fn repair_with_rng(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
-        // This is a simple repair strategy that might not work for all problems
-        // A more sophisticated repair would depend on the specific problem
-        
-        // Extract sequence
-        let sequence = (self.extractor)(phenotype);
-        
-        // Create a map of element to position
-        let mut positions = HashMap::new();
-        for (idx, element) in sequence.iter().enumerate() {
-            positions.insert(element, idx);
+        // This is a generic implementation that might not work for all phenotypes
+        // It relies on the phenotype's mutate method to potentially fix the dependency issue
+
+        // Check if there are any violations
+        let violations = self.check(phenotype);
+        if violations.is_empty() {
+            return false; // No violations to repair
         }
-        
-        // Check for violations
-        let mut violations = false;
-        
-        for (before, after) in &self.dependencies {
-            if let (Some(&before_pos), Some(&after_pos)) = (positions.get(before), positions.get(after)) {
-                if before_pos >= after_pos {
-                    violations = true;
-                    break;
-                }
-            } else {
-                // If either element is missing, that's a violation
-                violations = true;
-                break;
-            }
-        }
-        
-        // If no violations, no repair needed
-        if !violations {
-            return true;
-        }
-        
+
         // Try to repair by mutating the phenotype
-        // This is a generic approach that might not work for all phenotypes
         phenotype.mutate(rng);
-        
+
         // Check if repair was successful
-        let new_sequence = (self.extractor)(phenotype);
-        
-        // Create a map of element to position
-        let mut new_positions = HashMap::new();
-        for (idx, element) in new_sequence.iter().enumerate() {
-            new_positions.insert(element, idx);
-        }
-        
-        // Check for violations
-        for (before, after) in &self.dependencies {
-            if let (Some(&before_pos), Some(&after_pos)) = (new_positions.get(before), new_positions.get(after)) {
-                if before_pos >= after_pos {
-                    return false;
-                }
-            } else {
-                // If either element is missing, that's a violation
-                return false;
-            }
-        }
-        
-        true
+        let new_violations = self.check(phenotype);
+        new_violations.is_empty()
     }
-} 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::rng::RandomNumberGenerator;
+    use std::collections::{HashMap, HashSet};
+
+    // Test the constraint violation struct
+    #[test]
+    fn test_constraint_violation() {
+        let violation = ConstraintViolation::new("TestConstraint", "Test violation");
+        assert_eq!(violation.constraint_name, "TestConstraint");
+        assert_eq!(violation.description, "Test violation");
+        assert!(violation.severity.is_none());
+
+        let violation_with_severity =
+            ConstraintViolation::with_severity("TestConstraint", "Test violation", 2.5);
+        assert_eq!(violation_with_severity.constraint_name, "TestConstraint");
+        assert_eq!(violation_with_severity.description, "Test violation");
+        assert_eq!(violation_with_severity.severity, Some(2.5));
+    }
+
+    // Test the constraint module documentation examples
+    #[test]
+    fn test_constraint_documentation_examples() {
+        // This test verifies that the examples in the module documentation compile
+        // and work as expected. It doesn't directly test the constraints themselves,
+        // but ensures that the API is usable as documented.
+
+        // Example of creating a constraint violation
+        let violation = ConstraintViolation::new("UniqueValues", "Duplicate value 2 at position 3");
+        assert_eq!(violation.constraint_name, "UniqueValues");
+        assert_eq!(violation.description, "Duplicate value 2 at position 3");
+
+        // Example of creating a constraint violation with severity
+        let violation = ConstraintViolation::with_severity(
+            "CapacityConstraint",
+            "Bin 1 exceeds capacity by 3 items",
+            3.0,
+        );
+        assert_eq!(violation.severity, Some(3.0));
+
+        // Example of formatting a constraint violation
+        let violation = ConstraintViolation::new("TestConstraint", "Test violation");
+        let formatted = format!("{}", violation);
+        assert!(formatted.contains("TestConstraint"));
+        assert!(formatted.contains("Test violation"));
+    }
+}

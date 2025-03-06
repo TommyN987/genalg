@@ -258,21 +258,25 @@
 //! [`RouletteWheelSelection`]: selection::RouletteWheelSelection
 //! [`RankBasedSelection`]: selection::RankBasedSelection
 
+pub mod caching;
+pub mod constraints;
 pub mod error;
 pub mod evolution;
+pub mod local_search;
 pub mod phenotype;
 pub mod rng;
 pub mod selection;
 pub mod strategy;
-pub mod constraints;
-pub mod local_search;
-pub mod caching;
 
 // Re-export commonly used types for convenience
+pub use caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};
+pub use constraints::{Constraint, ConstraintManager, ConstraintViolation};
 pub use error::{GeneticError, OptionExt, Result, ResultExt};
 pub use evolution::{Challenge, EvolutionLauncher, EvolutionOptions, EvolutionResult, LogLevel};
+pub use local_search::{HillClimbing, LocalSearch, SimulatedAnnealing};
 pub use phenotype::Phenotype;
 pub use rng::ThreadLocalRng;
+pub use strategy::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy};
 pub use selection::{
     ElitistSelection, RankBasedSelection, RouletteWheelSelection, SelectionStrategy,
     TournamentSelection,
@@ -282,7 +286,3 @@ pub use strategy::{
     ordinary::OrdinaryStrategy,
     BreedStrategy,
 };
-pub use strategy::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
-pub use constraints::{Constraint, ConstraintManager, ConstraintViolation};
-pub use local_search::{LocalSearch, HillClimbing, SimulatedAnnealing};
-pub use caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};

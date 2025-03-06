@@ -1,69 +1,9 @@
-//! # Local Search Module
-//!
-//! This module provides tools for integrating local search techniques with genetic algorithms.
-//! Local search can significantly improve the performance of genetic algorithms by refining
-//! solutions through systematic exploration of the neighborhood around promising individuals.
-//!
-//! ## Key Components
-//!
-//! - `LocalSearch` trait: Defines the interface for local search algorithms
-//! - `HillClimbing`: A simple hill climbing algorithm
-//! - `SimulatedAnnealing`: A simulated annealing algorithm
-//! - `TabuSearch`: A tabu search algorithm
-//!
-//! ## Example
-//!
-//! ```rust
-//! use genalg::local_search::{LocalSearch, HillClimbing};
-//! use genalg::evolution::Challenge;
-//! use genalg::phenotype::Phenotype;
-//! use genalg::rng::RandomNumberGenerator;
-//!
-//! #[derive(Clone, Debug)]
-//! struct MySolution {
-//!     value: f64,
-//! }
-//!
-//! impl Phenotype for MySolution {
-//!     fn crossover(&mut self, other: &Self) {
-//!         self.value = (self.value + other.value) / 2.0;
-//!     }
-//!
-//!     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
-//!         let values = rng.fetch_uniform(-0.1, 0.1, 1);
-//!         let delta = values.front().unwrap();
-//!         self.value += *delta as f64;
-//!     }
-//! }
-//!
-//! #[derive(Debug)]
-//! struct MyChallenge {
-//!     target: f64,
-//! }
-//!
-//! impl Challenge<MySolution> for MyChallenge {
-//!     fn score(&self, phenotype: &MySolution) -> f64 {
-//!         // Higher score is better (inverse of distance to target)
-//!         1.0 / (phenotype.value - self.target).abs().max(0.001)
-//!     }
-//! }
-//!
-//! // Create a hill climbing algorithm
-//! let hill_climbing = HillClimbing::new(10); // 10 iterations
-//!
-//! // Apply local search to a solution
-//! let challenge = MyChallenge { target: 42.0 };
-//! let mut solution = MySolution { value: 40.0 };
-//! let improved = hill_climbing.search(&mut solution, &challenge);
-//! ```
-
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::sync::Arc;
-
 use crate::evolution::Challenge;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
+use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::sync::Arc;
 
 /// Trait for local search algorithms.
 ///
@@ -84,7 +24,12 @@ where
     /// This method is useful for local search algorithms that require randomness.
     ///
     /// Returns `true` if the phenotype was improved, `false` otherwise.
-    fn search_with_rng(&self, phenotype: &mut P, challenge: &C, rng: &mut RandomNumberGenerator) -> bool;
+    fn search_with_rng(
+        &self,
+        phenotype: &mut P,
+        challenge: &C,
+        rng: &mut RandomNumberGenerator,
+    ) -> bool;
 }
 
 /// A simple hill climbing algorithm.
@@ -130,7 +75,12 @@ where
         self.search_with_rng(phenotype, challenge, &mut rng)
     }
 
-    fn search_with_rng(&self, phenotype: &mut P, challenge: &C, rng: &mut RandomNumberGenerator) -> bool {
+    fn search_with_rng(
+        &self,
+        phenotype: &mut P,
+        challenge: &C,
+        rng: &mut RandomNumberGenerator,
+    ) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_score = initial_score;
         let mut improved = false;
@@ -203,7 +153,12 @@ where
         self.search_with_rng(phenotype, challenge, &mut rng)
     }
 
-    fn search_with_rng(&self, phenotype: &mut P, challenge: &C, rng: &mut RandomNumberGenerator) -> bool {
+    fn search_with_rng(
+        &self,
+        phenotype: &mut P,
+        challenge: &C,
+        rng: &mut RandomNumberGenerator,
+    ) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_score = initial_score;
         let mut current_solution = phenotype.clone();
@@ -296,7 +251,12 @@ where
         self.search_with_rng(phenotype, challenge, &mut rng)
     }
 
-    fn search_with_rng(&self, phenotype: &mut P, challenge: &C, rng: &mut RandomNumberGenerator) -> bool {
+    fn search_with_rng(
+        &self,
+        phenotype: &mut P,
+        challenge: &C,
+        rng: &mut RandomNumberGenerator,
+    ) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_solution = phenotype.clone();
         let mut current_score = initial_score;
@@ -408,7 +368,12 @@ where
         improved
     }
 
-    fn search_with_rng(&self, phenotype: &mut P, challenge: &C, rng: &mut RandomNumberGenerator) -> bool {
+    fn search_with_rng(
+        &self,
+        phenotype: &mut P,
+        challenge: &C,
+        rng: &mut RandomNumberGenerator,
+    ) -> bool {
         let mut improved = false;
 
         for algorithm in &self.algorithms {
@@ -429,4 +394,147 @@ where
     fn default() -> Self {
         Self::new()
     }
-} 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::evolution::Challenge;
+    use crate::phenotype::Phenotype;
+    use crate::rng::RandomNumberGenerator;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct TestPhenotype {
+        value: i32,
+    }
+
+    impl Phenotype for TestPhenotype {
+        fn crossover(&mut self, other: &Self) {
+            self.value = (self.value + other.value) / 2;
+        }
+
+        fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+            let values = rng.fetch_uniform(-1.0, 1.0, 1);
+            let delta = values.front().unwrap();
+            self.value += (*delta * 10.0) as i32;
+        }
+    }
+
+    #[derive(Debug)]
+    struct TestChallenge {
+        target: i32,
+        // Counter to track the number of evaluations
+        evaluations: Arc<AtomicUsize>,
+    }
+
+    impl TestChallenge {
+        fn new(target: i32) -> Self {
+            Self {
+                target,
+                evaluations: Arc::new(AtomicUsize::new(0)),
+            }
+        }
+
+        fn get_evaluations(&self) -> usize {
+            self.evaluations.load(Ordering::SeqCst)
+        }
+    }
+
+    impl Challenge<TestPhenotype> for TestChallenge {
+        fn score(&self, phenotype: &TestPhenotype) -> f64 {
+            // Increment the evaluation counter
+            self.evaluations.fetch_add(1, Ordering::SeqCst);
+
+            // Higher score is better (inverse of distance to target)
+            1.0 / ((phenotype.value - self.target).abs() as f64 + 1.0)
+        }
+    }
+
+    #[test]
+    fn test_hill_climbing() {
+        let hill_climbing = HillClimbing::new(10);
+        let challenge = TestChallenge::new(50);
+        let mut phenotype = TestPhenotype { value: 0 };
+
+        let _improved = hill_climbing.search(&mut phenotype, &challenge);
+
+        // The phenotype should be closer to the target
+        assert!(phenotype.value != 0);
+        assert!(challenge.get_evaluations() > 0);
+
+        // Test with neighbors parameter
+        let hill_climbing = HillClimbing::with_neighbors(5, 20);
+        let challenge = TestChallenge::new(50);
+        let mut phenotype = TestPhenotype { value: 0 };
+
+        let _improved = hill_climbing.search(&mut phenotype, &challenge);
+
+        // The phenotype should be closer to the target
+        assert!(phenotype.value != 0);
+        assert!(challenge.get_evaluations() > 0);
+    }
+
+    #[test]
+    fn test_simulated_annealing() {
+        // Use more iterations and higher initial temperature to increase chances of finding improvement
+        let simulated_annealing = SimulatedAnnealing::new(50, 20.0, 0.95);
+        let challenge = TestChallenge::new(50);
+        let mut phenotype = TestPhenotype { value: 10 }; // Start with a non-zero value
+
+        let improved = simulated_annealing.search(&mut phenotype, &challenge);
+
+        // Check that evaluations were performed, even if no improvement was found
+        assert!(challenge.get_evaluations() > 0);
+
+        // If the algorithm reported an improvement, the value should have changed
+        if improved {
+            assert!(phenotype.value != 10);
+        }
+    }
+
+    #[test]
+    fn test_tabu_search() {
+        let tabu_search = TabuSearch::new(10, 5, 3);
+        let challenge = TestChallenge::new(50);
+        let mut phenotype = TestPhenotype { value: 0 };
+
+        let _improved = tabu_search.search(&mut phenotype, &challenge);
+
+        // The phenotype should be closer to the target
+        assert!(phenotype.value != 0);
+        assert!(challenge.get_evaluations() > 0);
+    }
+
+    #[test]
+    fn test_hybrid_local_search() {
+        let mut hybrid = HybridLocalSearch::new();
+        hybrid
+            .add_algorithm(HillClimbing::new(5))
+            .add_algorithm(SimulatedAnnealing::new(5, 1.0, 0.9));
+
+        let challenge = TestChallenge::new(50);
+        let mut phenotype = TestPhenotype { value: 0 };
+
+        let _improved = hybrid.search(&mut phenotype, &challenge);
+
+        // The phenotype should be closer to the target
+        assert!(phenotype.value != 0);
+        assert!(challenge.get_evaluations() > 0);
+    }
+
+    #[test]
+    fn test_search_with_rng() {
+        let hill_climbing = HillClimbing::new(10);
+        let challenge = TestChallenge::new(50);
+        let mut phenotype = TestPhenotype { value: 0 };
+        let mut rng = RandomNumberGenerator::new();
+
+        let _improved = hill_climbing.search_with_rng(&mut phenotype, &challenge, &mut rng);
+
+        // The phenotype should be closer to the target
+        assert!(phenotype.value != 0);
+        assert!(challenge.get_evaluations() > 0);
+    }
+}

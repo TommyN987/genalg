@@ -94,6 +94,8 @@ use std::sync::Arc;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 
+pub mod combinatorial;
+
 /// Represents a violation of a constraint.
 #[derive(Debug, Clone)]
 pub struct ConstraintViolation {
@@ -185,10 +187,7 @@ where
     /// The default implementation sums the severity of all violations, or counts
     /// the number of violations if severity is not specified.
     fn penalty_score(&self, violations: &[ConstraintViolation]) -> f64 {
-        violations
-            .iter()
-            .map(|v| v.severity.unwrap_or(1.0))
-            .sum()
+        violations.iter().map(|v| v.severity.unwrap_or(1.0)).sum()
     }
 }
 
@@ -303,4 +302,181 @@ where
     fn default() -> Self {
         Self::new()
     }
-} 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::rng::RandomNumberGenerator;
+    use std::collections::HashSet;
+
+    #[derive(Clone, Debug)]
+    struct TestPhenotype {
+        values: Vec<usize>,
+    }
+
+    impl Phenotype for TestPhenotype {
+        fn crossover(&mut self, other: &Self) {
+            if !other.values.is_empty() && !self.values.is_empty() {
+                self.values[0] = other.values[0];
+            }
+        }
+
+        fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {
+            if !self.values.is_empty() {
+                self.values[0] += 1;
+            }
+        }
+    }
+
+    impl AsRef<Vec<usize>> for TestPhenotype {
+        fn as_ref(&self) -> &Vec<usize> {
+            &self.values
+        }
+    }
+
+    impl AsMut<Vec<usize>> for TestPhenotype {
+        fn as_mut(&mut self) -> &mut Vec<usize> {
+            &mut self.values
+        }
+    }
+
+    #[derive(Debug)]
+    struct UniqueValuesConstraint;
+
+    impl Constraint<TestPhenotype> for UniqueValuesConstraint {
+        fn check(&self, phenotype: &TestPhenotype) -> Vec<ConstraintViolation> {
+            let values = phenotype.as_ref();
+            let mut seen = HashSet::new();
+            let mut violations = Vec::new();
+
+            for (idx, &value) in values.iter().enumerate() {
+                if !seen.insert(value) {
+                    violations.push(ConstraintViolation::new(
+                        "UniqueValues",
+                        format!("Duplicate value {} at position {}", value, idx),
+                    ));
+                }
+            }
+
+            violations
+        }
+
+        fn repair(&self, phenotype: &mut TestPhenotype) -> bool {
+            let values = phenotype.as_mut();
+            let mut seen = HashSet::new();
+            let mut modified = false;
+
+            for i in 0..values.len() {
+                let mut value = values[i];
+                while !seen.insert(value) {
+                    value += 1;
+                    modified = true;
+                }
+                values[i] = value;
+            }
+
+            modified
+        }
+    }
+
+    #[test]
+    fn test_constraint_violation() {
+        let violation = ConstraintViolation::new("Test", "Test violation");
+        assert_eq!(violation.constraint_name, "Test");
+        assert_eq!(violation.description, "Test violation");
+        assert!(violation.severity.is_none());
+
+        let violation_with_severity =
+            ConstraintViolation::with_severity("Test", "Test violation", 2.0);
+        assert_eq!(violation_with_severity.constraint_name, "Test");
+        assert_eq!(violation_with_severity.description, "Test violation");
+        assert_eq!(violation_with_severity.severity, Some(2.0));
+    }
+
+    #[test]
+    fn test_constraint_check() {
+        let constraint = UniqueValuesConstraint;
+
+        // Valid phenotype
+        let valid_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 4, 5],
+        };
+        let violations = constraint.check(&valid_phenotype);
+        assert!(violations.is_empty());
+
+        // Invalid phenotype
+        let invalid_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5],
+        };
+        let violations = constraint.check(&invalid_phenotype);
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].constraint_name, "UniqueValues");
+    }
+
+    #[test]
+    fn test_constraint_repair() {
+        let constraint = UniqueValuesConstraint;
+
+        // Invalid phenotype
+        let mut invalid_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5],
+        };
+        let repaired = constraint.repair(&mut invalid_phenotype);
+
+        assert!(repaired);
+        assert_eq!(invalid_phenotype.values, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_constraint_manager() {
+        let mut manager = ConstraintManager::new();
+        manager.add_constraint(UniqueValuesConstraint);
+
+        // Valid phenotype
+        let valid_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 4, 5],
+        };
+        assert!(manager.is_valid(&valid_phenotype));
+
+        // Invalid phenotype
+        let invalid_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5],
+        };
+        assert!(!manager.is_valid(&invalid_phenotype));
+
+        let violations = manager.check_all(&invalid_phenotype);
+        assert_eq!(violations.len(), 1);
+
+        // Test repair
+        let mut repairable_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5],
+        };
+        let repaired = manager.repair_all(&mut repairable_phenotype);
+        assert!(repaired);
+        assert!(manager.is_valid(&repairable_phenotype));
+    }
+
+    #[test]
+    fn test_penalty_score() {
+        let constraint = UniqueValuesConstraint;
+
+        // Create violations with different severities
+        let violations = vec![
+            ConstraintViolation::with_severity("Test", "Violation 1", 1.0),
+            ConstraintViolation::with_severity("Test", "Violation 2", 2.0),
+        ];
+
+        let score = constraint.penalty_score(&violations);
+        assert_eq!(score, 3.0);
+
+        // Test with no severity
+        let violations = vec![
+            ConstraintViolation::new("Test", "Violation 1"),
+            ConstraintViolation::new("Test", "Violation 2"),
+        ];
+
+        let score = constraint.penalty_score(&violations);
+        assert_eq!(score, 2.0);
+    }
+}

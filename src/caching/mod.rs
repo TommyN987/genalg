@@ -4,12 +4,12 @@
 //! Caching is particularly useful for expensive fitness functions or when the same phenotypes
 //! are evaluated multiple times during the evolution process.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
-use std::cell::RefCell;
 
 use crate::evolution::Challenge;
 use crate::phenotype::Phenotype;
@@ -100,18 +100,18 @@ where
 {
     fn score(&self, phenotype: &P) -> f64 {
         let key = phenotype.cache_key();
-        
+
         // Try to get the score from the cache
         let mut cache = self.cache.lock().unwrap();
-        
+
         if let Some(score) = cache.get(&key) {
             return *score;
         }
-        
+
         // If not in cache, calculate the score and cache it
         let score = self.challenge.score(phenotype);
         cache.insert(key, score);
-        
+
         score
     }
 }
@@ -142,7 +142,8 @@ where
 
     /// Gets a cached fitness value if available.
     pub fn get(&self, key: &P::Key) -> Option<f64> {
-        self.cache.get()
+        self.cache
+            .get()
             .and_then(|cell| cell.try_borrow().ok())
             .and_then(|cache| cache.get(key).copied())
     }
@@ -155,7 +156,7 @@ where
                 return;
             }
         }
-        
+
         // If we couldn't get the existing cache, create a new one
         let mut new_cache = HashMap::new();
         new_cache.insert(key, value);
@@ -174,14 +175,16 @@ where
 
     /// Returns the number of cached fitness evaluations for the current thread.
     pub fn len(&self) -> usize {
-        self.cache.get()
+        self.cache
+            .get()
             .and_then(|cell| cell.try_borrow().ok())
             .map_or(0, |cache| cache.len())
     }
 
     /// Returns `true` if the cache for the current thread is empty.
     pub fn is_empty(&self) -> bool {
-        self.cache.get()
+        self.cache
+            .get()
             .and_then(|cell| cell.try_borrow().ok())
             .map_or(true, |cache| cache.is_empty())
     }
@@ -251,16 +254,171 @@ where
 {
     fn score(&self, phenotype: &P) -> f64 {
         let key = phenotype.cache_key();
-        
+
         // Try to get the score from the cache
         if let Some(score) = self.cache.get(&key) {
             return score;
         }
-        
+
         // If not in cache, calculate the score and cache it
         let score = self.challenge.score(phenotype);
         self.cache.insert(key, score);
-        
+
         score
     }
-} 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::evolution::Challenge;
+    use crate::phenotype::Phenotype;
+    use crate::rng::RandomNumberGenerator;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    #[derive(Clone, Debug)]
+    struct TestPhenotype {
+        value: i32,
+    }
+
+    impl Phenotype for TestPhenotype {
+        fn crossover(&mut self, other: &Self) {
+            self.value = (self.value + other.value) / 2;
+        }
+
+        fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+            let values = rng.fetch_uniform(-1.0, 1.0, 1);
+            let delta = values.front().unwrap();
+            self.value += (*delta * 10.0) as i32;
+        }
+    }
+
+    impl CacheKey for TestPhenotype {
+        type Key = i32;
+
+        fn cache_key(&self) -> Self::Key {
+            self.value
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct TestChallenge {
+        target: i32,
+        // Counter to track the number of evaluations
+        evaluations: Arc<AtomicUsize>,
+    }
+
+    impl TestChallenge {
+        fn new(target: i32) -> Self {
+            Self {
+                target,
+                evaluations: Arc::new(AtomicUsize::new(0)),
+            }
+        }
+
+        fn get_evaluations(&self) -> usize {
+            self.evaluations.load(Ordering::SeqCst)
+        }
+    }
+
+    impl Challenge<TestPhenotype> for TestChallenge {
+        fn score(&self, phenotype: &TestPhenotype) -> f64 {
+            // Increment the evaluation counter
+            self.evaluations.fetch_add(1, Ordering::SeqCst);
+
+            // Higher score is better (inverse of distance to target)
+            1.0 / ((phenotype.value - self.target).abs() as f64 + 1.0)
+        }
+    }
+
+    #[test]
+    fn test_cached_challenge() {
+        let challenge = TestChallenge::new(50);
+        let cached_challenge = CachedChallenge::new(challenge.clone());
+
+        // First evaluation should calculate the score
+        let phenotype1 = TestPhenotype { value: 10 };
+        let score1 = cached_challenge.score(&phenotype1);
+        assert_eq!(challenge.get_evaluations(), 1);
+
+        // Second evaluation of the same phenotype should use the cache
+        let phenotype2 = TestPhenotype { value: 10 };
+        let score2 = cached_challenge.score(&phenotype2);
+        assert_eq!(challenge.get_evaluations(), 1); // Still 1, not 2
+        assert_eq!(score1, score2);
+
+        // Different phenotype should calculate a new score
+        let phenotype3 = TestPhenotype { value: 20 };
+        let score3 = cached_challenge.score(&phenotype3);
+        assert_eq!(challenge.get_evaluations(), 2);
+        assert_ne!(score1, score3);
+
+        // Test cache size
+        assert_eq!(cached_challenge.cache_size(), 2);
+
+        // Test clear cache
+        cached_challenge.clear_cache();
+        assert_eq!(cached_challenge.cache_size(), 0);
+
+        // After clearing, should calculate again
+        let _score4 = cached_challenge.score(&phenotype1);
+        assert_eq!(challenge.get_evaluations(), 3);
+    }
+
+    #[test]
+    fn test_thread_local_cached_challenge() {
+        let challenge = TestChallenge::new(50);
+        let cached_challenge = ThreadLocalCachedChallenge::new(challenge.clone());
+
+        // First evaluation should calculate the score
+        let phenotype1 = TestPhenotype { value: 10 };
+        let score1 = cached_challenge.score(&phenotype1);
+        assert_eq!(challenge.get_evaluations(), 1);
+
+        // Second evaluation of the same phenotype should use the cache
+        let phenotype2 = TestPhenotype { value: 10 };
+        let score2 = cached_challenge.score(&phenotype2);
+        assert_eq!(challenge.get_evaluations(), 1); // Still 1, not 2
+        assert_eq!(score1, score2);
+
+        // Different phenotype should calculate a new score
+        let phenotype3 = TestPhenotype { value: 20 };
+        let score3 = cached_challenge.score(&phenotype3);
+        assert_eq!(challenge.get_evaluations(), 2);
+        assert_ne!(score1, score3);
+
+        // Test cache size
+        assert_eq!(cached_challenge.cache_size(), 2);
+
+        // Test clear cache
+        cached_challenge.clear_cache();
+        assert_eq!(cached_challenge.cache_size(), 0);
+
+        // After clearing, should calculate again
+        let _score4 = cached_challenge.score(&phenotype1);
+        assert_eq!(challenge.get_evaluations(), 3);
+    }
+
+    #[test]
+    fn test_with_cache() {
+        let challenge = TestChallenge::new(50);
+
+        // Create a pre-populated cache
+        let mut cache = HashMap::new();
+        cache.insert(10, 0.5);
+
+        let cached_challenge = CachedChallenge::with_cache(challenge.clone(), cache);
+
+        // Should use the pre-populated cache value
+        let phenotype = TestPhenotype { value: 10 };
+        let score = cached_challenge.score(&phenotype);
+        assert_eq!(score, 0.5);
+        assert_eq!(challenge.get_evaluations(), 0); // No evaluation needed
+
+        // Test get_cache
+        let cache = cached_challenge.get_cache();
+        assert_eq!(cache.len(), 1);
+        assert_eq!(*cache.get(&10).unwrap(), 0.5);
+    }
+}
