@@ -238,10 +238,11 @@ fn test_combinatorial_optimization() -> Result<()> {
         .local_search_probability(0.2)
         .build();
 
-    let mut strategy =
-        CombinatorialBreedStrategy::<AssignmentPhenotype, HillClimbing, AssignmentChallenge>::new(
-            config,
-        );
+    let mut strategy = CombinatorialBreedStrategy::<
+        AssignmentPhenotype,
+        HillClimbing,
+        CachedChallenge<AssignmentPhenotype, AssignmentChallenge>,
+    >::new(config, cached_challenge.clone());
     strategy.add_constraint(constraint);
     strategy.with_local_search(hill_climbing);
 
