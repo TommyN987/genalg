@@ -4,6 +4,7 @@
 //! new individuals (phenotypes) based on a set of parent individuals and evolution options.
 pub mod bounded;
 pub mod ordinary;
+pub mod combinatorial;
 
 use std::fmt::Debug;
 
