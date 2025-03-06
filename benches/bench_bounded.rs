@@ -4,6 +4,7 @@ use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
+    selection::ElitistSelection,
     strategy::{BoundedBreedStrategy, Magnitude},
 };
 
@@ -69,13 +70,10 @@ fn bench_bounded(c: &mut Criterion) {
     let starting_value = XCoordinate::new(7.0);
     let evol_options = EvolutionOptions::new(100, LogLevel::None, 2, 20);
     let challenge = XCoordinateChallenge::new(2.0);
-    let strategy = BoundedBreedStrategy::default();
+    let breed_strategy = BoundedBreedStrategy::default();
+    let selection_strategy = ElitistSelection::default();
 
-    let launcher: EvolutionLauncher<
-        XCoordinate,
-        BoundedBreedStrategy<XCoordinate>,
-        XCoordinateChallenge,
-    > = EvolutionLauncher::new(strategy, challenge);
+    let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
 
     c.bench_function("bounded_evolution", |b| {
         b.iter(|| {
