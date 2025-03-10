@@ -9,9 +9,12 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-use crate::constraints::{Constraint, ConstraintViolation};
+use crate::constraints::{Constraint, ConstraintViolation, ConstraintError};
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
+
+/// Result type for constraint operations.
+pub type Result<T> = std::result::Result<T, ConstraintError>;
 
 /// Ensures that all elements in a collection are unique.
 ///
@@ -51,16 +54,21 @@ where
     /// # Returns
     ///
     /// A new unique elements constraint, or an error if the name is empty.
-    pub fn new<S: Into<String>>(name: S, extractor: F) -> Result<Self, String> {
+    pub fn new<S: Into<String>>(name: S, extractor: F) -> Result<Self> {
         let name = name.into();
         if name.is_empty() {
-            return Err("Constraint name cannot be empty".to_string());
+            return Err(ConstraintError::EmptyName);
         }
         Ok(Self {
             name,
             extractor,
             _marker: PhantomData,
         })
+    }
+    
+    /// Returns the name of the constraint.
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 
@@ -147,13 +155,13 @@ where
     /// # Returns
     ///
     /// A new complete assignment constraint, or an error if the name is empty or if the required keys set is empty.
-    pub fn new<S: Into<String>>(name: S, extractor: F, required_keys: HashSet<K>) -> Result<Self, String> {
+    pub fn new<S: Into<String>>(name: S, extractor: F, required_keys: HashSet<K>) -> Result<Self> {
         let name = name.into();
         if name.is_empty() {
-            return Err("Constraint name cannot be empty".to_string());
+            return Err(ConstraintError::EmptyName);
         }
         if required_keys.is_empty() {
-            return Err("Required keys set cannot be empty".to_string());
+            return Err(ConstraintError::EmptyCollection("Required keys set".to_string()));
         }
         Ok(Self {
             name,
@@ -249,10 +257,10 @@ where
     /// # Returns
     ///
     /// A new capacity constraint, or an error if the name is empty.
-    pub fn new<S: Into<String>>(name: S, extractor: F, capacity_fn: G) -> Result<Self, String> {
+    pub fn new<S: Into<String>>(name: S, extractor: F, capacity_fn: G) -> Result<Self> {
         let name = name.into();
         if name.is_empty() {
-            return Err("Constraint name cannot be empty".to_string());
+            return Err(ConstraintError::EmptyName);
         }
         Ok(Self {
             name,
@@ -351,13 +359,13 @@ where
     /// # Returns
     ///
     /// A new dependency constraint, or an error if the name is empty or if the dependencies vector is empty.
-    pub fn new<S: Into<String>>(name: S, extractor: F, dependencies: Vec<(T, T)>) -> Result<Self, String> {
+    pub fn new<S: Into<String>>(name: S, extractor: F, dependencies: Vec<(T, T)>) -> Result<Self> {
         let name = name.into();
         if name.is_empty() {
-            return Err("Constraint name cannot be empty".to_string());
+            return Err(ConstraintError::EmptyName);
         }
         if dependencies.is_empty() {
-            return Err("Dependencies vector cannot be empty".to_string());
+            return Err(ConstraintError::EmptyCollection("Dependencies vector".to_string()));
         }
         Ok(Self {
             name,
@@ -431,15 +439,15 @@ mod tests {
     #[test]
     fn test_constraint_violation() {
         let violation = ConstraintViolation::new("TestConstraint", "Test violation");
-        assert_eq!(violation.constraint_name, "TestConstraint");
-        assert_eq!(violation.description, "Test violation");
-        assert!(violation.severity.is_none());
+        assert_eq!(violation.constraint_name(), "TestConstraint");
+        assert_eq!(violation.description(), "Test violation");
+        assert!(violation.severity().is_none());
 
         let violation_with_severity =
             ConstraintViolation::with_severity("TestConstraint", "Test violation", 2.5);
-        assert_eq!(violation_with_severity.constraint_name, "TestConstraint");
-        assert_eq!(violation_with_severity.description, "Test violation");
-        assert_eq!(violation_with_severity.severity, Some(2.5));
+        assert_eq!(violation_with_severity.constraint_name(), "TestConstraint");
+        assert_eq!(violation_with_severity.description(), "Test violation");
+        assert_eq!(violation_with_severity.severity(), Some(2.5));
     }
 
     // Test the constraint module documentation examples
@@ -451,8 +459,8 @@ mod tests {
 
         // Example of creating a constraint violation
         let violation = ConstraintViolation::new("UniqueValues", "Duplicate value 2 at position 3");
-        assert_eq!(violation.constraint_name, "UniqueValues");
-        assert_eq!(violation.description, "Duplicate value 2 at position 3");
+        assert_eq!(violation.constraint_name(), "UniqueValues");
+        assert_eq!(violation.description(), "Duplicate value 2 at position 3");
 
         // Example of creating a constraint violation with severity
         let violation = ConstraintViolation::with_severity(
@@ -460,7 +468,7 @@ mod tests {
             "Bin 1 exceeds capacity by 3 items",
             3.0,
         );
-        assert_eq!(violation.severity, Some(3.0));
+        assert_eq!(violation.severity(), Some(3.0));
 
         // Example of formatting a constraint violation
         let violation = ConstraintViolation::new("TestConstraint", "Test violation");

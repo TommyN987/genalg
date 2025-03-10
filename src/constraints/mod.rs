@@ -4,13 +4,24 @@
 //! Constraints are particularly useful for combinatorial optimization problems where solutions
 //! must satisfy specific requirements to be valid.
 //!
+//! ## Overview
+//!
+//! In genetic algorithms, constraints define requirements that valid solutions must satisfy.
+//! This module provides tools for:
+//!
+//! - Defining constraints through the `Constraint` trait
+//! - Representing constraint violations with the `ConstraintViolation` struct
+//! - Managing multiple constraints with the `ConstraintManager`
+//! - Applying common constraints for combinatorial problems
+//!
 //! ## Key Components
 //!
 //! - `Constraint` trait: Defines the interface for constraints that can be applied to phenotypes
 //! - `ConstraintViolation`: Represents a specific violation of a constraint
 //! - `ConstraintManager`: Manages multiple constraints and evaluates them against phenotypes
+//! - Combinatorial constraints: Pre-built constraints for common optimization problems
 //!
-//! ## Example
+//! ## Basic Usage
 //!
 //! ```rust
 //! use genalg::constraints::{Constraint, ConstraintManager, ConstraintViolation};
@@ -86,25 +97,76 @@
 //! let violations = constraint_manager.check_all(&solution);
 //! assert_eq!(violations.len(), 1); // One duplicate value
 //! ```
+//!
+//! ## Using Combinatorial Constraints
+//!
+//! The module provides pre-built constraints for common combinatorial optimization problems:
+//!
+//! ```rust
+//! use genalg::constraints::{ConstraintManager, UniqueElementsConstraint};
+//! use genalg::phenotype::Phenotype;
+//! use genalg::rng::RandomNumberGenerator;
+//! use std::collections::HashSet;
+//! use std::fmt::Debug;
+//!
+//! #[derive(Clone, Debug)]
+//! struct PermutationSolution {
+//!     sequence: Vec<usize>,
+//! }
+//!
+//! impl Phenotype for PermutationSolution {
+//!     fn crossover(&mut self, other: &Self) {
+//!         // Implementation omitted for brevity
+//!     }
+//!
+//!     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {
+//!         // Implementation omitted for brevity
+//!     }
+//! }
+//!
+//! // Create a constraint that ensures all elements in the sequence are unique
+//! let unique_constraint = UniqueElementsConstraint::new(
+//!     "UniqueElements",
+//!     |solution: &PermutationSolution| solution.sequence.clone()
+//! ).unwrap();
+//!
+//! // Add the constraint to a manager
+//! let mut manager = ConstraintManager::new();
+//! manager.add_constraint(unique_constraint);
+//!
+//! // Check a solution
+//! let solution = PermutationSolution { sequence: vec![1, 2, 3, 4, 5] };
+//! assert!(manager.is_valid(&solution));
+//!
+//! let invalid_solution = PermutationSolution { sequence: vec![1, 2, 3, 2, 5] };
+//! assert!(!manager.is_valid(&invalid_solution));
+//! ```
 
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::error::Error;
 
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 
 pub mod combinatorial;
 
+// Re-export combinatorial constraints for easier access
+pub use combinatorial::{
+    UniqueElementsConstraint, CompleteAssignmentConstraint, 
+    CapacityConstraint, DependencyConstraint
+};
+
 /// Represents a violation of a constraint.
 #[derive(Debug, Clone)]
 pub struct ConstraintViolation {
     /// The name of the constraint that was violated
-    pub constraint_name: String,
+    constraint_name: String,
     /// A description of the violation
-    pub description: String,
+    description: String,
     /// An optional severity score (higher means more severe)
-    pub severity: Option<f64>,
+    severity: Option<f64>,
 }
 
 impl ConstraintViolation {
@@ -129,6 +191,21 @@ impl ConstraintViolation {
             severity: Some(severity),
         }
     }
+    
+    /// Returns the name of the constraint that was violated.
+    pub fn constraint_name(&self) -> &str {
+        &self.constraint_name
+    }
+    
+    /// Returns the description of the violation.
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+    
+    /// Returns the severity of the violation, if specified.
+    pub fn severity(&self) -> Option<f64> {
+        self.severity
+    }
 }
 
 impl Display for ConstraintViolation {
@@ -136,9 +213,9 @@ impl Display for ConstraintViolation {
         write!(
             f,
             "Constraint '{}' violated: {}{}",
-            self.constraint_name,
-            self.description,
-            self.severity
+            self.constraint_name(),
+            self.description(),
+            self.severity()
                 .map(|s| format!(" (severity: {})", s))
                 .unwrap_or_default()
         )
@@ -357,6 +434,29 @@ where
     }
 }
 
+/// Error type for constraint-related operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConstraintError {
+    /// The constraint name is empty.
+    EmptyName,
+    /// A required collection is empty.
+    EmptyCollection(String),
+    /// Other constraint-related errors.
+    Other(String),
+}
+
+impl Display for ConstraintError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConstraintError::EmptyName => write!(f, "Constraint name cannot be empty"),
+            ConstraintError::EmptyCollection(name) => write!(f, "{} cannot be empty", name),
+            ConstraintError::Other(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl Error for ConstraintError {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -436,15 +536,15 @@ mod tests {
     #[test]
     fn test_constraint_violation() {
         let violation = ConstraintViolation::new("Test", "Test violation");
-        assert_eq!(violation.constraint_name, "Test");
-        assert_eq!(violation.description, "Test violation");
-        assert!(violation.severity.is_none());
+        assert_eq!(violation.constraint_name(), "Test");
+        assert_eq!(violation.description(), "Test violation");
+        assert!(violation.severity().is_none());
 
         let violation_with_severity =
             ConstraintViolation::with_severity("Test", "Test violation", 2.0);
-        assert_eq!(violation_with_severity.constraint_name, "Test");
-        assert_eq!(violation_with_severity.description, "Test violation");
-        assert_eq!(violation_with_severity.severity, Some(2.0));
+        assert_eq!(violation_with_severity.constraint_name(), "Test");
+        assert_eq!(violation_with_severity.description(), "Test violation");
+        assert_eq!(violation_with_severity.severity(), Some(2.0));
     }
 
     #[test]
@@ -464,7 +564,7 @@ mod tests {
         };
         let violations = constraint.check(&invalid_phenotype);
         assert_eq!(violations.len(), 1);
-        assert_eq!(violations[0].constraint_name, "UniqueValues");
+        assert_eq!(violations[0].constraint_name(), "UniqueValues");
     }
 
     #[test]
