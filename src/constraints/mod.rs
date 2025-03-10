@@ -213,6 +213,11 @@ where
         }
     }
 
+    /// Creates a new constraint manager builder.
+    pub fn builder() -> ConstraintManagerBuilder<P> {
+        ConstraintManagerBuilder::new()
+    }
+
     /// Adds a constraint to the manager.
     pub fn add_constraint<C>(&mut self, constraint: C) -> &mut Self
     where
@@ -270,13 +275,14 @@ where
     /// This score can be used to adjust the fitness of phenotypes that violate
     /// constraints. Higher values indicate more severe violations.
     pub fn total_penalty_score(&self, phenotype: &P) -> f64 {
-        self.constraints
-            .iter()
-            .map(|c| {
-                let violations = c.check(phenotype);
-                c.penalty_score(&violations)
-            })
-            .sum()
+        let mut total_score = 0.0;
+        for constraint in &self.constraints {
+            let violations = constraint.check(phenotype);
+            if !violations.is_empty() {
+                total_score += constraint.penalty_score(&violations);
+            }
+        }
+        total_score
     }
 
     /// Checks if the phenotype is valid (satisfies all constraints).
@@ -296,6 +302,53 @@ where
 }
 
 impl<P> Default for ConstraintManager<P>
+where
+    P: Phenotype,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Builder for creating a constraint manager with a fluent API.
+#[derive(Debug, Clone)]
+pub struct ConstraintManagerBuilder<P>
+where
+    P: Phenotype,
+{
+    constraints: Vec<Arc<dyn Constraint<P>>>,
+}
+
+impl<P> ConstraintManagerBuilder<P>
+where
+    P: Phenotype,
+{
+    /// Creates a new empty constraint manager builder.
+    pub fn new() -> Self {
+        Self {
+            constraints: Vec::new(),
+        }
+    }
+
+    /// Adds a constraint to the manager.
+    pub fn with_constraint<C>(mut self, constraint: C) -> Self
+    where
+        C: Constraint<P> + 'static,
+    {
+        self.constraints.push(Arc::new(constraint));
+        self
+    }
+
+    /// Builds the constraint manager.
+    pub fn build(self) -> ConstraintManager<P> {
+        ConstraintManager {
+            constraints: self.constraints,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<P> Default for ConstraintManagerBuilder<P>
 where
     P: Phenotype,
 {
@@ -478,5 +531,44 @@ mod tests {
 
         let score = constraint.penalty_score(&violations);
         assert_eq!(score, 2.0);
+    }
+
+    #[test]
+    fn test_constraint_manager_builder() {
+        // Create a constraint manager using the builder pattern
+        let manager = ConstraintManager::<TestPhenotype>::builder()
+            .with_constraint(UniqueValuesConstraint)
+            .build();
+
+        // Valid phenotype
+        let valid_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 4, 5],
+        };
+        assert!(manager.is_valid(&valid_phenotype));
+
+        // Invalid phenotype
+        let invalid_phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5],
+        };
+        assert!(!manager.is_valid(&invalid_phenotype));
+
+        // Test with multiple constraints
+        let manager = ConstraintManager::<TestPhenotype>::builder()
+            .with_constraint(UniqueValuesConstraint)
+            .with_constraint(UniqueValuesConstraint) // Adding the same constraint twice for testing
+            .build();
+
+        assert_eq!(manager.len(), 2);
+        assert!(!manager.is_empty());
+    }
+
+    #[test]
+    fn test_constraint_manager_builder_default() {
+        // Test that the default builder creates an empty manager
+        let builder = ConstraintManagerBuilder::<TestPhenotype>::default();
+        let manager = builder.build();
+        
+        assert_eq!(manager.len(), 0);
+        assert!(manager.is_empty());
     }
 }
