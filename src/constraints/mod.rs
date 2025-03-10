@@ -149,6 +149,7 @@ use std::error::Error;
 
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
+use crate::evolution::Challenge;
 
 pub mod combinatorial;
 
@@ -457,6 +458,161 @@ impl Display for ConstraintError {
 
 impl Error for ConstraintError {}
 
+/// A challenge wrapper that adjusts fitness scores based on constraint violations.
+///
+/// This wrapper applies penalties to the fitness score based on constraint violations,
+/// making it useful for handling soft constraints in optimization problems.
+///
+/// # Examples
+///
+/// ```
+/// use genalg::constraints::{Constraint, ConstraintManager, ConstraintViolation, PenaltyAdjustedChallenge};
+/// use genalg::evolution::Challenge;
+/// use genalg::phenotype::Phenotype;
+/// use genalg::rng::RandomNumberGenerator;
+/// use std::fmt::Debug;
+///
+/// #[derive(Clone, Debug)]
+/// struct MySolution {
+///     values: Vec<usize>,
+/// }
+///
+/// impl Phenotype for MySolution {
+///     fn crossover(&mut self, other: &Self) {
+///         // Implementation for example
+///         if !other.values.is_empty() && !self.values.is_empty() {
+///             self.values[0] = other.values[0];
+///         }
+///     }
+///
+///     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {
+///         // Implementation for example
+///         if !self.values.is_empty() {
+///             self.values[0] += 1;
+///         }
+///     }
+/// }
+///
+/// // Define a constraint that requires all values to be unique
+/// #[derive(Debug)]
+/// struct UniqueValuesConstraint;
+///
+/// impl Constraint<MySolution> for UniqueValuesConstraint {
+///     fn check(&self, phenotype: &MySolution) -> Vec<ConstraintViolation> {
+///         let mut seen = std::collections::HashSet::new();
+///         let mut violations = Vec::new();
+///         
+///         for (i, &value) in phenotype.values.iter().enumerate() {
+///             if !seen.insert(value) {
+///                 violations.push(ConstraintViolation::new(
+///                     "UniqueValues",
+///                     format!("Duplicate value {} at position {}", value, i)
+///                 ));
+///             }
+///         }
+///         
+///         violations
+///     }
+/// }
+///
+/// // Define a challenge
+/// struct MyChallenge;
+///
+/// impl Challenge<MySolution> for MyChallenge {
+///     fn score(&self, phenotype: &MySolution) -> f64 {
+///         // Simple scoring function
+///         phenotype.values.iter().sum::<usize>() as f64
+///     }
+/// }
+///
+/// // Create a constraint manager
+/// let mut constraint_manager = ConstraintManager::new();
+/// constraint_manager.add_constraint(UniqueValuesConstraint);
+///
+/// // Create a penalty-adjusted challenge
+/// let challenge = MyChallenge;
+/// let penalty_challenge = PenaltyAdjustedChallenge::new(challenge, constraint_manager, 10.0);
+///
+/// // Create a solution with a constraint violation
+/// let solution = MySolution { values: vec![1, 2, 3, 2, 5] };
+///
+/// // Score will be reduced by the penalty
+/// let base_score = 1 + 2 + 3 + 2 + 5; // = 13
+/// let penalty = 10.0; // One violation with weight 10.0
+/// let expected_score = base_score as f64 - penalty; // = 3.0
+/// assert_eq!(penalty_challenge.score(&solution), expected_score);
+/// ```
+#[derive(Debug, Clone)]
+pub struct PenaltyAdjustedChallenge<P, C>
+where
+    P: Phenotype,
+    C: Challenge<P>,
+{
+    /// The wrapped challenge
+    challenge: C,
+    /// The constraint manager
+    constraint_manager: ConstraintManager<P>,
+    /// The weight to apply to penalties
+    penalty_weight: f64,
+    /// Phantom data for the phenotype type
+    _marker: PhantomData<P>,
+}
+
+impl<P, C> PenaltyAdjustedChallenge<P, C>
+where
+    P: Phenotype,
+    C: Challenge<P>,
+{
+    /// Creates a new penalty-adjusted challenge.
+    ///
+    /// # Arguments
+    ///
+    /// * `challenge` - The challenge to wrap.
+    /// * `constraint_manager` - The constraint manager to use for calculating penalties.
+    /// * `penalty_weight` - The weight to apply to penalties when adjusting fitness.
+    ///
+    /// # Returns
+    ///
+    /// A new penalty-adjusted challenge.
+    pub fn new(challenge: C, constraint_manager: ConstraintManager<P>, penalty_weight: f64) -> Self {
+        Self {
+            challenge,
+            constraint_manager,
+            penalty_weight,
+            _marker: PhantomData,
+        }
+    }
+
+    /// Returns a reference to the wrapped challenge.
+    pub fn inner(&self) -> &C {
+        &self.challenge
+    }
+
+    /// Returns a reference to the constraint manager.
+    pub fn constraint_manager(&self) -> &ConstraintManager<P> {
+        &self.constraint_manager
+    }
+
+    /// Returns the penalty weight.
+    pub fn penalty_weight(&self) -> f64 {
+        self.penalty_weight
+    }
+}
+
+impl<P, C> Challenge<P> for PenaltyAdjustedChallenge<P, C>
+where
+    P: Phenotype,
+    C: Challenge<P>,
+{
+    fn score(&self, phenotype: &P) -> f64 {
+        let base_score = self.challenge.score(phenotype);
+        let penalty = self.constraint_manager.total_penalty_score(phenotype) * self.penalty_weight;
+        
+        // Adjust score based on penalty (lower is worse)
+        base_score - penalty
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -670,5 +826,136 @@ mod tests {
         
         assert_eq!(manager.len(), 0);
         assert!(manager.is_empty());
+    }
+
+    #[test]
+    fn test_penalty_adjusted_challenge() {
+        // Create a phenotype with a constraint violation
+        let phenotype = PenaltyTestPhenotype {
+            values: vec![1, 2, 3, 2, 5], // Duplicate value 2
+        };
+
+        // Create a constraint manager with a constraint
+        let mut constraint_manager = ConstraintManager::new();
+        constraint_manager.add_constraint(PenaltyUniqueValuesConstraint);
+
+        // Create a challenge
+        let challenge = PenaltyTestChallenge::default();
+
+        // Create a penalty-adjusted challenge
+        let penalty_challenge = PenaltyAdjustedChallenge::new(challenge, constraint_manager, 10.0);
+
+        // Calculate expected score
+        let base_score = phenotype.values.iter().sum::<usize>() as f64; // = 13.0
+        let penalty = 10.0; // One violation with weight 10.0
+        let expected_score = base_score - penalty; // = 3.0
+
+        // Check that the score is adjusted by the penalty
+        assert_eq!(penalty_challenge.score(&phenotype), expected_score);
+    }
+
+    #[test]
+    fn test_penalty_adjusted_challenge_accessors() {
+        // Create a constraint manager
+        let constraint_manager = ConstraintManager::new();
+
+        // Create a challenge
+        let challenge = PenaltyTestChallenge::default();
+
+        // Create a penalty-adjusted challenge
+        let penalty_challenge = PenaltyAdjustedChallenge::new(
+            challenge,
+            constraint_manager,
+            5.0,
+        );
+
+        // Check accessors
+        assert_eq!(penalty_challenge.penalty_weight(), 5.0);
+        assert_eq!(penalty_challenge.constraint_manager().len(), 0);
+        assert_eq!(penalty_challenge.inner().target, 0);
+    }
+
+    #[test]
+    fn test_penalty_adjusted_challenge_no_violations() {
+        // Create a phenotype with no constraint violations
+        let phenotype = PenaltyTestPhenotype {
+            values: vec![1, 2, 3, 4, 5],
+        };
+
+        // Create a constraint manager with a constraint
+        let mut constraint_manager = ConstraintManager::new();
+        constraint_manager.add_constraint(PenaltyUniqueValuesConstraint);
+
+        // Create a challenge
+        let challenge = PenaltyTestChallenge::default();
+
+        // Create a penalty-adjusted challenge
+        let penalty_challenge = PenaltyAdjustedChallenge::new(challenge, constraint_manager, 10.0);
+
+        // Calculate expected score (no penalty)
+        let expected_score = phenotype.values.iter().sum::<usize>() as f64; // = 15.0
+
+        // Check that the score is not adjusted
+        assert_eq!(penalty_challenge.score(&phenotype), expected_score);
+    }
+
+    // Test phenotype for PenaltyAdjustedChallenge tests
+    #[derive(Clone, Debug)]
+    struct PenaltyTestPhenotype {
+        values: Vec<usize>,
+    }
+
+    impl Phenotype for PenaltyTestPhenotype {
+        fn crossover(&mut self, other: &Self) {
+            if !other.values.is_empty() && !self.values.is_empty() {
+                self.values[0] = other.values[0];
+            }
+        }
+
+        fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {
+            if !self.values.is_empty() {
+                self.values[0] += 1;
+            }
+        }
+    }
+
+    // Test constraint for PenaltyAdjustedChallenge tests
+    #[derive(Debug)]
+    struct PenaltyUniqueValuesConstraint;
+
+    impl Constraint<PenaltyTestPhenotype> for PenaltyUniqueValuesConstraint {
+        fn check(&self, phenotype: &PenaltyTestPhenotype) -> Vec<ConstraintViolation> {
+            let mut seen = HashSet::new();
+            let mut violations = Vec::new();
+
+            for (i, &value) in phenotype.values.iter().enumerate() {
+                if !seen.insert(value) {
+                    violations.push(ConstraintViolation::new(
+                        "UniqueValues",
+                        format!("Duplicate value {} at position {}", value, i),
+                    ));
+                }
+            }
+
+            violations
+        }
+    }
+
+    // Test challenge for PenaltyAdjustedChallenge tests
+    #[derive(Debug, Clone)]
+    struct PenaltyTestChallenge {
+        target: usize,
+    }
+
+    impl Default for PenaltyTestChallenge {
+        fn default() -> Self {
+            Self { target: 0 }
+        }
+    }
+
+    impl Challenge<PenaltyTestPhenotype> for PenaltyTestChallenge {
+        fn score(&self, phenotype: &PenaltyTestPhenotype) -> f64 {
+            phenotype.values.iter().sum::<usize>() as f64
+        }
     }
 }

@@ -2,10 +2,76 @@
 //!
 //! This module provides specialized breeding strategies for combinatorial optimization problems.
 //! These strategies are designed to handle discrete solution spaces and constraints effectively.
+//!
+//! ## Overview
+//!
+//! Combinatorial optimization problems involve finding an optimal arrangement or selection from
+//! a discrete set of possibilities. Examples include:
+//!
+//! - Assignment problems (assigning resources to tasks)
+//! - Routing problems (finding optimal paths)
+//! - Scheduling problems (arranging tasks in time)
+//! - Packing problems (fitting items into containers)
+//!
+//! These problems often have constraints that must be satisfied for a solution to be valid.
+//!
+//! ## Constraint Handling Approaches
+//!
+//! The `CombinatorialBreedStrategy` supports two complementary approaches to handling constraints:
+//!
+//! 1. **Repair-based approach**: Invalid solutions are repaired during breeding
+//! 2. **Penalty-based approach**: Invalid solutions are penalized during fitness evaluation
+//!
+//! These approaches can be used separately or in combination, depending on the problem.
+//!
+//! ## Usage Examples
+//!
+//! ### Repair-based Approach
+//!
+//! To use the repair-based approach:
+//!
+//! 1. Create a strategy with repair configuration:
+//!    - Set `repair_probability` (e.g., 0.8) to control how often repair is attempted
+//!    - Set `max_repair_attempts` (e.g., 20) to limit repair iterations
+//!
+//! 2. Add constraints to the strategy using `add_constraint`
+//!
+//! 3. Use the strategy for breeding with `breed` method
+//!
+//! ### Penalty-based Approach
+//!
+//! To use the penalty-based approach:
+//!
+//! 1. Create a strategy with penalty configuration:
+//!    - Set `use_penalties` to `true`
+//!    - Set `penalty_weight` (e.g., 5.0) to control penalty severity
+//!
+//! 2. Add constraints to the strategy using `add_constraint`
+//!
+//! 3. Create a penalty-adjusted challenge using `create_penalty_challenge`
+//!
+//! 4. Use the penalty-adjusted challenge for fitness evaluation
+//!
+//! ### Combined Approach
+//!
+//! You can combine both approaches by:
+//!
+//! 1. Creating a strategy with both repair and penalty configuration:
+//!    - Set `repair_probability` (e.g., 0.5)
+//!    - Set `max_repair_attempts` (e.g., 10)
+//!    - Set `use_penalties` to `true`
+//!    - Set `penalty_weight` (e.g., 2.0)
+//!
+//! 2. Add constraints to the strategy
+//!
+//! 3. Use repair during breeding with `breed` method
+//!
+//! 4. Use penalties during fitness evaluation with `create_penalty_challenge`
 
-use crate::constraints::ConstraintManager;
+use crate::constraints::{ConstraintManager, PenaltyAdjustedChallenge};
 use crate::error::{GeneticError, Result};
 use crate::evolution::options::EvolutionOptions;
+use crate::evolution::Challenge;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 use crate::strategy::BreedStrategy;
@@ -17,6 +83,10 @@ pub struct CombinatorialBreedConfig {
     pub repair_probability: f64,
     /// The maximum number of repair attempts
     pub max_repair_attempts: usize,
+    /// Whether to use penalties for constraint violations
+    pub use_penalties: bool,
+    /// The weight to apply to penalties when adjusting fitness
+    pub penalty_weight: f64,
 }
 
 impl Default for CombinatorialBreedConfig {
@@ -24,6 +94,8 @@ impl Default for CombinatorialBreedConfig {
         Self {
             repair_probability: 0.5,
             max_repair_attempts: 10,
+            use_penalties: false,
+            penalty_weight: 1.0,
         }
     }
 }
@@ -38,6 +110,8 @@ impl CombinatorialBreedConfig {
 pub struct CombinatorialBreedConfigBuilder {
     repair_probability: Option<f64>,
     max_repair_attempts: Option<usize>,
+    use_penalties: Option<bool>,
+    penalty_weight: Option<f64>,
 }
 
 impl CombinatorialBreedConfigBuilder {
@@ -51,6 +125,16 @@ impl CombinatorialBreedConfigBuilder {
         self
     }
 
+    pub fn use_penalties(mut self, value: bool) -> Self {
+        self.use_penalties = Some(value);
+        self
+    }
+
+    pub fn penalty_weight(mut self, value: f64) -> Self {
+        self.penalty_weight = Some(value);
+        self
+    }
+
     pub fn build(self) -> CombinatorialBreedConfig {
         let default = CombinatorialBreedConfig::default();
         CombinatorialBreedConfig {
@@ -60,6 +144,12 @@ impl CombinatorialBreedConfigBuilder {
             max_repair_attempts: self
                 .max_repair_attempts
                 .unwrap_or(default.max_repair_attempts),
+            use_penalties: self
+                .use_penalties
+                .unwrap_or(default.use_penalties),
+            penalty_weight: self
+                .penalty_weight
+                .unwrap_or(default.penalty_weight),
         }
     }
 }
@@ -105,6 +195,39 @@ where
         self
     }
 
+    /// Returns a reference to the constraint manager.
+    pub fn constraint_manager(&self) -> &ConstraintManager<P> {
+        &self.constraint_manager
+    }
+
+    /// Returns a reference to the configuration.
+    pub fn config(&self) -> &CombinatorialBreedConfig {
+        &self.config
+    }
+
+    /// Creates a penalty-adjusted challenge wrapper using this strategy's constraint manager.
+    ///
+    /// This method wraps a challenge with a `PenaltyAdjustedChallenge` that applies penalties
+    /// based on constraint violations.
+    ///
+    /// # Arguments
+    ///
+    /// * `challenge` - The challenge to wrap.
+    ///
+    /// # Returns
+    ///
+    /// A new penalty-adjusted challenge.
+    pub fn create_penalty_challenge<C>(&self, challenge: C) -> PenaltyAdjustedChallenge<P, C>
+    where
+        C: Challenge<P>,
+    {
+        PenaltyAdjustedChallenge::new(
+            challenge,
+            self.constraint_manager.clone(),
+            self.config.penalty_weight,
+        )
+    }
+
     /// Attempts to repair a solution that violates constraints.
     fn repair_solution(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
         // Check if there are any violations
@@ -127,6 +250,35 @@ impl<P> BreedStrategy<P> for CombinatorialBreedStrategy<P>
 where
     P: Phenotype,
 {
+    /// Breeds new individuals based on a set of parent individuals and evolution options.
+    ///
+    /// This method generates offspring by:
+    /// 1. Selecting parent pairs randomly from the provided parents
+    /// 2. Creating children through crossover and mutation
+    /// 3. Optionally repairing invalid solutions based on the strategy's configuration
+    ///
+    /// The repair behavior is controlled by the `CombinatorialBreedConfig`:
+    /// - If `use_penalties` is `false` (default), invalid solutions are repaired with
+    ///   probability `repair_probability`
+    /// - If `use_penalties` is `true`, repair may still be attempted, but the strategy
+    ///   is designed to work with `PenaltyAdjustedChallenge` to penalize invalid solutions
+    ///   during fitness evaluation
+    ///
+    /// # Arguments
+    ///
+    /// * `parents` - A slice containing the parent individuals.
+    /// * `evol_options` - A reference to the evolution options specifying algorithm parameters.
+    /// * `rng` - A mutable reference to the random number generator.
+    ///
+    /// # Returns
+    ///
+    /// A Result containing a vector of newly bred individuals, or a GeneticError if breeding fails.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if:
+    /// - The parents slice is empty
+    /// - Random number generation fails
     fn breed(
         &self,
         parents: &[P],
@@ -180,7 +332,7 @@ where
             // Mutate child
             child.mutate(rng);
 
-            // Repair if invalid and configured to do so
+            // Determine if we should attempt repair based on configuration
             let random = match rng.fetch_uniform(0.0, 1.0, 1).front() {
                 Some(val) => *val,
                 None => {
@@ -190,9 +342,18 @@ where
                 }
             };
 
-            if random < self.config.repair_probability as f32
-                && !self.constraint_manager.is_valid(&child)
-            {
+            // Check if the child violates any constraints
+            let is_valid = self.constraint_manager.is_valid(&child);
+
+            // If using penalties, we might skip repair even for invalid solutions
+            let should_repair = !self.config.use_penalties && 
+                                random < self.config.repair_probability as f32 && 
+                                !is_valid;
+            
+            // If not using penalties, or if we're using both approaches, attempt repair
+            if should_repair || (self.config.use_penalties && 
+                                random < self.config.repair_probability as f32 && 
+                                !is_valid) {
                 self.repair_solution(&mut child, rng);
             }
 
@@ -257,10 +418,6 @@ mod tests {
                 target,
                 evaluations: Arc::new(AtomicUsize::new(0)),
             }
-        }
-
-        fn get_evaluations(&self) -> usize {
-            self.evaluations.load(Ordering::SeqCst)
         }
     }
 
@@ -414,5 +571,162 @@ mod tests {
         // Check result
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), GeneticError::EmptyPopulation));
+    }
+
+    #[test]
+    fn test_combinatorial_breed_config_with_penalties() {
+        // Test builder with penalty options
+        let config = CombinatorialBreedConfig::builder()
+            .repair_probability(0.3)
+            .max_repair_attempts(5)
+            .use_penalties(true)
+            .penalty_weight(2.5)
+            .build();
+
+        assert_eq!(config.repair_probability, 0.3);
+        assert_eq!(config.max_repair_attempts, 5);
+        assert_eq!(config.use_penalties, true);
+        assert_eq!(config.penalty_weight, 2.5);
+    }
+
+    #[test]
+    fn test_create_penalty_challenge() {
+        // Create a strategy with a constraint
+        let config = CombinatorialBreedConfig::builder()
+            .penalty_weight(10.0)
+            .build();
+        let mut strategy = CombinatorialBreedStrategy::<TestPhenotype>::new(config);
+        strategy.add_constraint(UniqueValuesConstraint);
+
+        // Create a challenge
+        let challenge = TestChallenge::new(10);
+
+        // Create a penalty-adjusted challenge
+        let penalty_challenge = strategy.create_penalty_challenge(challenge);
+
+        // Create a phenotype with a constraint violation
+        let phenotype = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5], // Duplicate value 2
+        };
+
+        // Calculate expected score
+        let base_score = -(((1 + 2 + 3 + 2 + 5) as isize - 10).abs() as f64); // = -3.0
+        let penalty = 10.0; // One violation with weight 10.0
+        let expected_score = base_score - penalty; // = -13.0
+
+        // Check that the score is adjusted by the penalty
+        assert_eq!(penalty_challenge.score(&phenotype), expected_score);
+    }
+
+    #[test]
+    fn test_constraint_manager_accessor() {
+        // Create a strategy with a constraint
+        let config = CombinatorialBreedConfig::default();
+        let mut strategy = CombinatorialBreedStrategy::<TestPhenotype>::new(config);
+        strategy.add_constraint(UniqueValuesConstraint);
+
+        // Check that the constraint manager has one constraint
+        assert_eq!(strategy.constraint_manager().len(), 1);
+    }
+
+    #[test]
+    fn test_config_accessor() {
+        // Create a strategy with a custom config
+        let config = CombinatorialBreedConfig::builder()
+            .repair_probability(0.7)
+            .build();
+        let strategy = CombinatorialBreedStrategy::<TestPhenotype>::new(config);
+
+        // Check that the config accessor returns the correct config
+        assert_eq!(strategy.config().repair_probability, 0.7);
+    }
+
+    #[test]
+    fn test_breed_with_penalties() {
+        // Create a strategy with penalties enabled
+        let config = CombinatorialBreedConfig::builder()
+            .repair_probability(0.0) // Never repair
+            .use_penalties(true)
+            .penalty_weight(5.0)
+            .build();
+        let mut strategy = CombinatorialBreedStrategy::<TestPhenotype>::new(config);
+        strategy.add_constraint(UniqueValuesConstraint);
+
+        // Create parents with constraint violations
+        let parent1 = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5], // Has duplicate
+        };
+        let parent2 = TestPhenotype {
+            values: vec![6, 7, 8, 9, 10], // No duplicates
+        };
+        let parents = vec![parent1.clone(), parent2];
+
+        // Create evolution options
+        let mut options = crate::evolution::options::EvolutionOptions::default();
+        options.set_num_offspring(5);
+
+        // Create RNG
+        let mut rng = RandomNumberGenerator::new();
+
+        // Breed
+        let result = strategy.breed(&parents, &options, &mut rng);
+
+        // Check result
+        assert!(result.is_ok());
+        let children = result.unwrap();
+        assert_eq!(children.len(), 5);
+
+        // Since repair_probability is 0, children should still have duplicates
+        let mut has_duplicates = false;
+        for child in &children {
+            let violations = UniqueValuesConstraint.check(child);
+            if !violations.is_empty() {
+                has_duplicates = true;
+                break;
+            }
+        }
+        assert!(has_duplicates, "At least one child should have duplicates when repair_probability is 0");
+    }
+
+    #[test]
+    fn test_breed_with_repair_and_penalties() {
+        // Create a strategy with both repair and penalties enabled
+        let config = CombinatorialBreedConfig::builder()
+            .repair_probability(1.0) // Always repair
+            .use_penalties(true)
+            .penalty_weight(5.0)
+            .build();
+        let mut strategy = CombinatorialBreedStrategy::<TestPhenotype>::new(config);
+        strategy.add_constraint(UniqueValuesConstraint);
+
+        // Create parents with constraint violations
+        let parent1 = TestPhenotype {
+            values: vec![1, 2, 3, 2, 5], // Has duplicate
+        };
+        let parent2 = TestPhenotype {
+            values: vec![6, 7, 8, 9, 10], // No duplicates
+        };
+        let parents = vec![parent1.clone(), parent2];
+
+        // Create evolution options
+        let mut options = crate::evolution::options::EvolutionOptions::default();
+        options.set_num_offspring(5);
+
+        // Create RNG
+        let mut rng = RandomNumberGenerator::new();
+
+        // Breed
+        let result = strategy.breed(&parents, &options, &mut rng);
+
+        // Check result
+        assert!(result.is_ok());
+        let children = result.unwrap();
+        assert_eq!(children.len(), 5);
+
+        // Since repair_probability is 1.0, children should not have duplicates
+        for child in &children {
+            let violations = UniqueValuesConstraint.check(child);
+            assert!(violations.is_empty(), "Children should not have duplicates when repair_probability is 1.0");
+        }
     }
 }
