@@ -1,18 +1,29 @@
+//! # Local Search Algorithms
+//!
+//! This module provides local search algorithms for refining solutions in genetic algorithms.
+//! Local search algorithms can be used to improve solutions by exploring their neighborhood
+//! and moving to better solutions.
+
 use crate::evolution::Challenge;
+use crate::error::{GeneticError, Result};
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-/// Trait for local search algorithms.
+pub mod application;
+pub mod manager;
+
+/// A trait for local search algorithms.
 ///
-/// Local search algorithms improve solutions by exploring the neighborhood
-/// around a current solution and moving to better solutions.
+/// Local search algorithms improve solutions by exploring their neighborhood
+/// and moving to better solutions. They are often used in combination with
+/// genetic algorithms to refine solutions.
 pub trait LocalSearch<P, C>: Debug + Send + Sync
 where
     P: Phenotype,
-    C: Challenge<P>,
+    C: Challenge<P> + ?Sized,
 {
     /// Applies the local search algorithm to the given phenotype.
     ///
@@ -32,6 +43,13 @@ where
     ) -> bool;
 }
 
+// Re-export key types for convenience
+pub use application::{
+    AllIndividualsStrategy, LocalSearchApplicationStrategy, ProbabilisticStrategy, TopNStrategy,
+    TopPercentStrategy,
+};
+pub use manager::LocalSearchManager;
+
 /// A simple hill climbing algorithm.
 ///
 /// Hill climbing is a local search algorithm that iteratively moves to better
@@ -48,20 +66,60 @@ impl HillClimbing {
     /// Creates a new hill climbing algorithm with the given maximum number of iterations.
     ///
     /// The maximum number of neighbors to evaluate per iteration is set to 10.
-    pub fn new(max_iterations: usize) -> Self {
-        Self {
+    ///
+    /// # Arguments
+    ///
+    /// * `max_iterations` - The maximum number of iterations to perform.
+    ///
+    /// # Returns
+    ///
+    /// A new hill climbing algorithm.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `max_iterations` is 0.
+    pub fn new(max_iterations: usize) -> Result<Self> {
+        if max_iterations == 0 {
+            return Err(GeneticError::Configuration(
+                "Maximum iterations must be greater than 0".to_string(),
+            ));
+        }
+        Ok(Self {
             max_iterations,
             max_neighbors: 10,
-        }
+        })
     }
 
     /// Creates a new hill climbing algorithm with the given maximum number of iterations
     /// and maximum number of neighbors to evaluate per iteration.
-    pub fn with_neighbors(max_iterations: usize, max_neighbors: usize) -> Self {
-        Self {
+    ///
+    /// # Arguments
+    ///
+    /// * `max_iterations` - The maximum number of iterations to perform.
+    /// * `max_neighbors` - The maximum number of neighbors to evaluate per iteration.
+    ///
+    /// # Returns
+    ///
+    /// A new hill climbing algorithm.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `max_iterations` or `max_neighbors` is 0.
+    pub fn with_neighbors(max_iterations: usize, max_neighbors: usize) -> Result<Self> {
+        if max_iterations == 0 {
+            return Err(GeneticError::Configuration(
+                "Maximum iterations must be greater than 0".to_string(),
+            ));
+        }
+        if max_neighbors == 0 {
+            return Err(GeneticError::Configuration(
+                "Maximum neighbors must be greater than 0".to_string(),
+            ));
+        }
+        Ok(Self {
             max_iterations,
             max_neighbors,
-        }
+        })
     }
 }
 
@@ -134,12 +192,44 @@ pub struct SimulatedAnnealing {
 
 impl SimulatedAnnealing {
     /// Creates a new simulated annealing algorithm with the given parameters.
-    pub fn new(max_iterations: usize, initial_temperature: f64, cooling_rate: f64) -> Self {
-        Self {
+    ///
+    /// # Arguments
+    ///
+    /// * `max_iterations` - The maximum number of iterations to perform.
+    /// * `initial_temperature` - The initial temperature.
+    /// * `cooling_rate` - The cooling rate (between 0 and 1).
+    ///
+    /// # Returns
+    ///
+    /// A new simulated annealing algorithm.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `max_iterations` is 0
+    /// - `initial_temperature` is not positive
+    /// - `cooling_rate` is not between 0 and 1
+    pub fn new(max_iterations: usize, initial_temperature: f64, cooling_rate: f64) -> Result<Self> {
+        if max_iterations == 0 {
+            return Err(GeneticError::Configuration(
+                "Maximum iterations must be greater than 0".to_string(),
+            ));
+        }
+        if initial_temperature <= 0.0 {
+            return Err(GeneticError::Configuration(
+                "Initial temperature must be positive".to_string(),
+            ));
+        }
+        if !(0.0..=1.0).contains(&cooling_rate) {
+            return Err(GeneticError::Configuration(
+                "Cooling rate must be between 0.0 and 1.0".to_string(),
+            ));
+        }
+        Ok(Self {
             max_iterations,
             initial_temperature,
             cooling_rate,
-        }
+        })
     }
 }
 
@@ -231,13 +321,45 @@ where
     P: Phenotype + Eq,
 {
     /// Creates a new tabu search algorithm with the given parameters.
-    pub fn new(max_iterations: usize, max_neighbors: usize, tabu_list_size: usize) -> Self {
-        Self {
+    ///
+    /// # Arguments
+    ///
+    /// * `max_iterations` - The maximum number of iterations to perform.
+    /// * `max_neighbors` - The maximum number of neighbors to evaluate per iteration.
+    /// * `tabu_list_size` - The maximum size of the tabu list.
+    ///
+    /// # Returns
+    ///
+    /// A new tabu search algorithm.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `max_iterations` is 0
+    /// - `max_neighbors` is 0
+    /// - `tabu_list_size` is 0
+    pub fn new(max_iterations: usize, max_neighbors: usize, tabu_list_size: usize) -> Result<Self> {
+        if max_iterations == 0 {
+            return Err(GeneticError::Configuration(
+                "Maximum iterations must be greater than 0".to_string(),
+            ));
+        }
+        if max_neighbors == 0 {
+            return Err(GeneticError::Configuration(
+                "Maximum neighbors must be greater than 0".to_string(),
+            ));
+        }
+        if tabu_list_size == 0 {
+            return Err(GeneticError::Configuration(
+                "Tabu list size must be greater than 0".to_string(),
+            ));
+        }
+        Ok(Self {
             max_iterations,
             max_neighbors,
             tabu_list_size,
             _marker: PhantomData,
-        }
+        })
     }
 }
 
@@ -454,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_hill_climbing() {
-        let hill_climbing = HillClimbing::new(10);
+        let hill_climbing = HillClimbing::new(10).unwrap();
         let challenge = TestChallenge::new(50);
         let mut phenotype = TestPhenotype { value: 0 };
 
@@ -465,7 +587,7 @@ mod tests {
         assert!(challenge.get_evaluations() > 0);
 
         // Test with neighbors parameter
-        let hill_climbing = HillClimbing::with_neighbors(5, 20);
+        let hill_climbing = HillClimbing::with_neighbors(5, 20).unwrap();
         let challenge = TestChallenge::new(50);
         let mut phenotype = TestPhenotype { value: 0 };
 
@@ -479,7 +601,7 @@ mod tests {
     #[test]
     fn test_simulated_annealing() {
         // Use more iterations and higher initial temperature to increase chances of finding improvement
-        let simulated_annealing = SimulatedAnnealing::new(50, 20.0, 0.95);
+        let simulated_annealing = SimulatedAnnealing::new(50, 20.0, 0.95).unwrap();
         let challenge = TestChallenge::new(50);
         let mut phenotype = TestPhenotype { value: 10 }; // Start with a non-zero value
 
@@ -496,7 +618,7 @@ mod tests {
 
     #[test]
     fn test_tabu_search() {
-        let tabu_search = TabuSearch::new(10, 5, 3);
+        let tabu_search = TabuSearch::new(10, 5, 3).unwrap();
         let challenge = TestChallenge::new(50);
         let mut phenotype = TestPhenotype { value: 0 };
 
@@ -511,8 +633,8 @@ mod tests {
     fn test_hybrid_local_search() {
         let mut hybrid = HybridLocalSearch::new();
         hybrid
-            .add_algorithm(HillClimbing::new(5))
-            .add_algorithm(SimulatedAnnealing::new(5, 1.0, 0.9));
+            .add_algorithm(HillClimbing::new(5).unwrap())
+            .add_algorithm(SimulatedAnnealing::new(5, 1.0, 0.9).unwrap());
 
         let challenge = TestChallenge::new(50);
         let mut phenotype = TestPhenotype { value: 0 };
@@ -526,7 +648,7 @@ mod tests {
 
     #[test]
     fn test_search_with_rng() {
-        let hill_climbing = HillClimbing::new(10);
+        let hill_climbing = HillClimbing::new(10).unwrap();
         let challenge = TestChallenge::new(50);
         let mut phenotype = TestPhenotype { value: 0 };
         let mut rng = RandomNumberGenerator::new();

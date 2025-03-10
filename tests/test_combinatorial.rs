@@ -3,9 +3,12 @@ use genalg::{
     constraints::{Constraint, ConstraintViolation},
     error::Result,
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
-    local_search::HillClimbing,
+    local_search::{
+        application::TopPercentStrategy, HillClimbing, LocalSearchManager,
+    },
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
+    selection::TournamentSelection,
     strategy::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy},
 };
 
@@ -226,25 +229,22 @@ fn test_combinatorial_optimization() -> Result<()> {
     // Create the constraint
     let constraint = ValidAssignmentConstraint;
 
-    // Create the local search algorithm
-    let hill_climbing = HillClimbing::new(10);
-
     // Create the breeding strategy
     let config = CombinatorialBreedConfig::builder()
         .repair_probability(1.0) // Always repair
         .max_repair_attempts(10)
-        .use_elitism(true)
-        .num_elites(2)
-        .local_search_probability(0.2)
         .build();
 
-    let mut strategy = CombinatorialBreedStrategy::<
-        AssignmentPhenotype,
-        HillClimbing,
-        CachedChallenge<AssignmentPhenotype, AssignmentChallenge>,
-    >::new(config, cached_challenge.clone());
+    let mut strategy = CombinatorialBreedStrategy::<AssignmentPhenotype>::new(config);
     strategy.add_constraint(constraint);
-    strategy.with_local_search(hill_climbing);
+
+    // Create the selection strategy
+    let selection_strategy = TournamentSelection::new(3);
+
+    // Create the local search algorithm and manager
+    let hill_climbing = HillClimbing::new(10);
+    let top_percent_strategy = TopPercentStrategy::new_maximizing(0.2); // Apply to top 20%
+    let local_search_manager = LocalSearchManager::new(hill_climbing, top_percent_strategy);
 
     // Create the evolution options
     let options = EvolutionOptions::builder()
@@ -255,7 +255,11 @@ fn test_combinatorial_optimization() -> Result<()> {
         .build();
 
     // Create the launcher
-    let launcher = EvolutionLauncher::new(strategy, cached_challenge);
+    let launcher = EvolutionLauncher::new(
+        strategy,
+        selection_strategy,
+        cached_challenge.clone(),
+    );
 
     // Run the evolution
     let result = launcher.configure(options, initial_phenotype).run()?;
