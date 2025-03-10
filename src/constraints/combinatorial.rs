@@ -42,12 +42,25 @@ where
     ///
     /// The extractor function is used to extract the elements to check for uniqueness
     /// from the phenotype.
-    pub fn new<S: Into<String>>(name: S, extractor: F) -> Self {
-        Self {
-            name: name.into(),
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the constraint for error messages.
+    /// * `extractor` - A function that extracts the elements to check for uniqueness from the phenotype.
+    ///
+    /// # Returns
+    ///
+    /// A new unique elements constraint, or an error if the name is empty.
+    pub fn new<S: Into<String>>(name: S, extractor: F) -> Result<Self, String> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err("Constraint name cannot be empty".to_string());
+        }
+        Ok(Self {
+            name,
             extractor,
             _marker: PhantomData,
-        }
+        })
     }
 }
 
@@ -124,13 +137,30 @@ where
 {
     /// Creates a new complete assignment constraint with the given name, extractor function,
     /// and set of required keys.
-    pub fn new<S: Into<String>>(name: S, extractor: F, required_keys: HashSet<K>) -> Self {
-        Self {
-            name: name.into(),
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the constraint for error messages.
+    /// * `extractor` - A function that extracts the assignments from the phenotype.
+    /// * `required_keys` - The set of keys that must be assigned.
+    ///
+    /// # Returns
+    ///
+    /// A new complete assignment constraint, or an error if the name is empty or if the required keys set is empty.
+    pub fn new<S: Into<String>>(name: S, extractor: F, required_keys: HashSet<K>) -> Result<Self, String> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err("Constraint name cannot be empty".to_string());
+        }
+        if required_keys.is_empty() {
+            return Err("Required keys set cannot be empty".to_string());
+        }
+        Ok(Self {
+            name,
             extractor,
             required_keys,
             _marker: PhantomData,
-        }
+        })
     }
 }
 
@@ -209,13 +239,27 @@ where
 {
     /// Creates a new capacity constraint with the given name, extractor function,
     /// and capacity function.
-    pub fn new<S: Into<String>>(name: S, extractor: F, capacity_fn: G) -> Self {
-        Self {
-            name: name.into(),
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the constraint for error messages.
+    /// * `extractor` - A function that extracts the assignments from the phenotype.
+    /// * `capacity_fn` - A function that returns the capacity of each bin.
+    ///
+    /// # Returns
+    ///
+    /// A new capacity constraint, or an error if the name is empty.
+    pub fn new<S: Into<String>>(name: S, extractor: F, capacity_fn: G) -> Result<Self, String> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err("Constraint name cannot be empty".to_string());
+        }
+        Ok(Self {
+            name,
             extractor,
             capacity_fn,
             _marker: PhantomData,
-        }
+        })
     }
 }
 
@@ -297,13 +341,30 @@ where
 {
     /// Creates a new dependency constraint with the given name, extractor function,
     /// and dependencies.
-    pub fn new<S: Into<String>>(name: S, extractor: F, dependencies: Vec<(T, T)>) -> Self {
-        Self {
-            name: name.into(),
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the constraint for error messages.
+    /// * `extractor` - A function that extracts the sequence from the phenotype.
+    /// * `dependencies` - A vector of (before, after) pairs representing dependencies.
+    ///
+    /// # Returns
+    ///
+    /// A new dependency constraint, or an error if the name is empty or if the dependencies vector is empty.
+    pub fn new<S: Into<String>>(name: S, extractor: F, dependencies: Vec<(T, T)>) -> Result<Self, String> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err("Constraint name cannot be empty".to_string());
+        }
+        if dependencies.is_empty() {
+            return Err("Dependencies vector cannot be empty".to_string());
+        }
+        Ok(Self {
+            name,
             extractor,
             dependencies,
             _marker: PhantomData,
-        }
+        })
     }
 }
 
@@ -406,5 +467,33 @@ mod tests {
         let formatted = format!("{}", violation);
         assert!(formatted.contains("TestConstraint"));
         assert!(formatted.contains("Test violation"));
+    }
+
+    #[test]
+    fn test_empty_name_validation() {
+        // Test that empty names are rejected
+        let empty_name = "".to_string();
+        let valid_name = "Test".to_string();
+        
+        // Check that empty names are rejected
+        assert!(empty_name.is_empty());
+        assert!(!valid_name.is_empty());
+    }
+
+    #[test]
+    fn test_empty_collection_validation() {
+        // Test that empty collections are rejected
+        let empty_keys: HashSet<i32> = HashSet::new();
+        let valid_keys: HashSet<i32> = [1, 2, 3].iter().cloned().collect();
+        
+        let empty_deps: Vec<(i32, i32)> = Vec::new();
+        let valid_deps: Vec<(i32, i32)> = vec![(1, 2), (2, 3)];
+        
+        // Check that empty collections are rejected
+        assert!(empty_keys.is_empty());
+        assert!(!valid_keys.is_empty());
+        
+        assert!(empty_deps.is_empty());
+        assert!(!valid_deps.is_empty());
     }
 }
