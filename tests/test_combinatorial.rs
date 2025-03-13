@@ -3,9 +3,6 @@ use genalg::{
     constraints::{Constraint, ConstraintViolation},
     error::Result,
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
-    local_search::{
-        application::TopPercentStrategy, HillClimbing, LocalSearchManager,
-    },
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::TournamentSelection,
@@ -241,11 +238,6 @@ fn test_combinatorial_optimization() -> Result<()> {
     // Create the selection strategy
     let selection_strategy = TournamentSelection::new(3);
 
-    // Create the local search algorithm and manager
-    let hill_climbing = HillClimbing::new(10);
-    let top_percent_strategy = TopPercentStrategy::new_maximizing(0.2); // Apply to top 20%
-    let local_search_manager = LocalSearchManager::new(hill_climbing, top_percent_strategy);
-
     // Create the evolution options
     let options = EvolutionOptions::builder()
         .num_generations(20)
@@ -255,11 +247,7 @@ fn test_combinatorial_optimization() -> Result<()> {
         .build();
 
     // Create the launcher
-    let launcher = EvolutionLauncher::new(
-        strategy,
-        selection_strategy,
-        cached_challenge.clone(),
-    );
+    let launcher = EvolutionLauncher::new(strategy, selection_strategy, cached_challenge.clone());
 
     // Run the evolution
     let result = launcher.configure(options, initial_phenotype).run()?;

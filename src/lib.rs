@@ -276,11 +276,11 @@ pub use evolution::{Challenge, EvolutionLauncher, EvolutionOptions, EvolutionRes
 pub use local_search::{HillClimbing, LocalSearch, SimulatedAnnealing};
 pub use phenotype::Phenotype;
 pub use rng::ThreadLocalRng;
-pub use strategy::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy};
 pub use selection::{
     ElitistSelection, RankBasedSelection, RouletteWheelSelection, SelectionStrategy,
     TournamentSelection,
 };
+pub use strategy::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy};
 pub use strategy::{
     bounded::{BoundedBreedConfig, BoundedBreedStrategy, Magnitude},
     ordinary::OrdinaryStrategy,

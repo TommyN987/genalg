@@ -144,12 +144,8 @@ impl CombinatorialBreedConfigBuilder {
             max_repair_attempts: self
                 .max_repair_attempts
                 .unwrap_or(default.max_repair_attempts),
-            use_penalties: self
-                .use_penalties
-                .unwrap_or(default.use_penalties),
-            penalty_weight: self
-                .penalty_weight
-                .unwrap_or(default.penalty_weight),
+            use_penalties: self.use_penalties.unwrap_or(default.use_penalties),
+            penalty_weight: self.penalty_weight.unwrap_or(default.penalty_weight),
         }
     }
 }
@@ -303,7 +299,7 @@ where
                     ))
                 }
             };
-            
+
             let mut parent2_idx = match rng.fetch_uniform(0.0, parents.len() as f32, 1).front() {
                 Some(val) => (*val as usize) % parents.len(),
                 None => {
@@ -312,7 +308,7 @@ where
                     ))
                 }
             };
-            
+
             // Ensure parent2 is different from parent1
             while parent2_idx == parent1_idx && parents.len() > 1 {
                 parent2_idx = match rng.fetch_uniform(0.0, parents.len() as f32, 1).front() {
@@ -345,15 +341,8 @@ where
             // Check if the child violates any constraints
             let is_valid = self.constraint_manager.is_valid(&child);
 
-            // If using penalties, we might skip repair even for invalid solutions
-            let should_repair = !self.config.use_penalties && 
-                                random < self.config.repair_probability as f32 && 
-                                !is_valid;
-            
-            // If not using penalties, or if we're using both approaches, attempt repair
-            if should_repair || (self.config.use_penalties && 
-                                random < self.config.repair_probability as f32 && 
-                                !is_valid) {
+            // Only repair if the random value is less than the repair probability and the solution is invalid
+            if random < self.config.repair_probability as f32 && !is_valid {
                 self.repair_solution(&mut child, rng);
             }
 
@@ -685,7 +674,10 @@ mod tests {
                 break;
             }
         }
-        assert!(has_duplicates, "At least one child should have duplicates when repair_probability is 0");
+        assert!(
+            has_duplicates,
+            "At least one child should have duplicates when repair_probability is 0"
+        );
     }
 
     #[test]
@@ -726,7 +718,10 @@ mod tests {
         // Since repair_probability is 1.0, children should not have duplicates
         for child in &children {
             let violations = UniqueValuesConstraint.check(child);
-            assert!(violations.is_empty(), "Children should not have duplicates when repair_probability is 1.0");
+            assert!(
+                violations.is_empty(),
+                "Children should not have duplicates when repair_probability is 1.0"
+            );
         }
     }
 }

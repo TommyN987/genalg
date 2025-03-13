@@ -85,22 +85,18 @@ where
         self.validate_inputs(population, fitness)?;
 
         // Select individuals for local search
-        let indices = self.application_strategy.select_for_local_search(
-            population,
-            fitness,
-            Some(rng),
-        )?;
+        let indices =
+            self.application_strategy
+                .select_for_local_search(population, fitness, Some(rng))?;
 
         // Initialize the improvements vector
         let mut improvements = vec![false; population.len()];
 
         // Apply local search to selected individuals
         for idx in indices {
-            improvements[idx] = self.algorithm.search_with_rng(
-                &mut population[idx],
-                challenge,
-                rng,
-            );
+            improvements[idx] =
+                self.algorithm
+                    .search_with_rng(&mut population[idx], challenge, rng);
         }
 
         Ok(improvements)
@@ -135,21 +131,16 @@ where
         self.validate_inputs(population, fitness)?;
 
         // Select individuals for local search
-        let indices = self.application_strategy.select_for_local_search(
-            population,
-            fitness,
-            None,
-        )?;
+        let indices = self
+            .application_strategy
+            .select_for_local_search(population, fitness, None)?;
 
         // Initialize the improvements vector
         let mut improvements = vec![false; population.len()];
 
         // Apply local search to selected individuals
         for idx in indices {
-            improvements[idx] = self.algorithm.search(
-                &mut population[idx],
-                challenge,
-            );
+            improvements[idx] = self.algorithm.search(&mut population[idx], challenge);
         }
 
         Ok(improvements)
@@ -294,11 +285,13 @@ mod tests {
         let manager = LocalSearchManager::new(hill_climbing, all_strategy);
         let mut rng = RandomNumberGenerator::from_seed(42);
 
-        let result = manager.apply(&mut population, &fitness, &challenge, Some(&mut rng)).unwrap();
-        
+        let result = manager
+            .apply(&mut population, &fitness, &challenge, Some(&mut rng))
+            .unwrap();
+
         // All individuals should have been selected for local search
         assert_eq!(result.len(), 3);
-        
+
         // The challenge should have been evaluated multiple times
         assert!(challenge.get_evaluations() > 0);
     }
@@ -317,11 +310,13 @@ mod tests {
         let manager = LocalSearchManager::new(hill_climbing, top_strategy);
         let mut rng = RandomNumberGenerator::from_seed(42);
 
-        let result = manager.apply(&mut population, &fitness, &challenge, Some(&mut rng)).unwrap();
-        
+        let result = manager
+            .apply(&mut population, &fitness, &challenge, Some(&mut rng))
+            .unwrap();
+
         // All individuals should have a result
         assert_eq!(result.len(), 3);
-        
+
         // The challenge should have been evaluated multiple times
         assert!(challenge.get_evaluations() > 0);
     }
@@ -337,17 +332,14 @@ mod tests {
         let mut rng = RandomNumberGenerator::from_seed(42);
 
         let result = manager.apply(&mut population, &fitness, &challenge, Some(&mut rng));
-        
+
         // Should return an error for empty population
         assert!(result.is_err());
     }
 
     #[test]
     fn test_local_search_manager_mismatched_lengths() {
-        let mut population = vec![
-            TestPhenotype { value: 1.0 },
-            TestPhenotype { value: 2.0 },
-        ];
+        let mut population = vec![TestPhenotype { value: 1.0 }, TestPhenotype { value: 2.0 }];
         let fitness = vec![-1.0, -2.0, -3.0]; // One more than population
         let challenge = TestChallenge::new(0.0);
         let hill_climbing = HillClimbing::new(10).unwrap();
@@ -356,8 +348,8 @@ mod tests {
         let mut rng = RandomNumberGenerator::from_seed(42);
 
         let result = manager.apply(&mut population, &fitness, &challenge, Some(&mut rng));
-        
+
         // Should return an error for mismatched lengths
         assert!(result.is_err());
     }
-} 
+}
