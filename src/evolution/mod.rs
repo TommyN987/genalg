@@ -1,3 +1,4 @@
+pub mod builder;
 pub mod challenge;
 pub mod launcher;
 pub mod options;
