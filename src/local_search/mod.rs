@@ -4,8 +4,8 @@
 //! Local search algorithms can be used to improve solutions by exploring their neighborhood
 //! and moving to better solutions.
 
-use crate::evolution::Challenge;
 use crate::error::{GeneticError, Result};
+use crate::evolution::Challenge;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 use std::fmt::Debug;

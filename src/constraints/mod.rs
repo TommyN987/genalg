@@ -100,10 +100,10 @@
 //!
 //! ## Using Combinatorial Constraints
 //!
-//! The module provides pre-built constraints for common combinatorial optimization problems:
+//! The module provides a framework for defining and enforcing constraints:
 //!
 //! ```rust
-//! use genalg::constraints::{ConstraintManager, UniqueElementsConstraint};
+//! use genalg::constraints::{Constraint, ConstraintManager, ConstraintViolation};
 //! use genalg::phenotype::Phenotype;
 //! use genalg::rng::RandomNumberGenerator;
 //! use std::collections::HashSet;
@@ -124,15 +124,31 @@
 //!     }
 //! }
 //!
-//! // Create a constraint that ensures all elements in the sequence are unique
-//! let unique_constraint = UniqueElementsConstraint::new(
-//!     "UniqueElements",
-//!     |solution: &PermutationSolution| solution.sequence.clone()
-//! ).unwrap();
+//! // Define a custom constraint that ensures all elements in the sequence are unique
+//! #[derive(Debug)]
+//! struct UniqueValuesConstraint;
+//!
+//! impl Constraint<PermutationSolution> for UniqueValuesConstraint {
+//!     fn check(&self, solution: &PermutationSolution) -> Vec<ConstraintViolation> {
+//!         let mut seen = HashSet::new();
+//!         let mut violations = Vec::new();
+//!         
+//!         for (i, &value) in solution.sequence.iter().enumerate() {
+//!             if !seen.insert(value) {
+//!                 violations.push(ConstraintViolation::new(
+//!                     "UniqueValues",
+//!                     format!("Duplicate value {} at position {}", value, i)
+//!                 ));
+//!             }
+//!         }
+//!         
+//!         violations
+//!     }
+//! }
 //!
 //! // Add the constraint to a manager
 //! let mut manager = ConstraintManager::new();
-//! manager.add_constraint(unique_constraint);
+//! manager.add_constraint(UniqueValuesConstraint);
 //!
 //! // Check a solution
 //! let solution = PermutationSolution { sequence: vec![1, 2, 3, 4, 5] };
@@ -142,21 +158,21 @@
 //! assert!(!manager.is_valid(&invalid_solution));
 //! ```
 
+use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 use std::sync::Arc;
-use std::error::Error;
 
+use crate::evolution::Challenge;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
-use crate::evolution::Challenge;
 
 pub mod combinatorial;
 
 // Re-export combinatorial constraints for easier access
 pub use combinatorial::{
-    UniqueElementsConstraint, CompleteAssignmentConstraint, 
-    CapacityConstraint, DependencyConstraint
+    CapacityConstraint, CompleteAssignmentConstraint, DependencyConstraint,
+    UniqueElementsConstraint,
 };
 
 /// Represents a violation of a constraint.
@@ -192,17 +208,17 @@ impl ConstraintViolation {
             severity: Some(severity),
         }
     }
-    
+
     /// Returns the name of the constraint that was violated.
     pub fn constraint_name(&self) -> &str {
         &self.constraint_name
     }
-    
+
     /// Returns the description of the violation.
     pub fn description(&self) -> &str {
         &self.description
     }
-    
+
     /// Returns the severity of the violation, if specified.
     pub fn severity(&self) -> Option<f64> {
         self.severity
@@ -574,7 +590,11 @@ where
     /// # Returns
     ///
     /// A new penalty-adjusted challenge.
-    pub fn new(challenge: C, constraint_manager: ConstraintManager<P>, penalty_weight: f64) -> Self {
+    pub fn new(
+        challenge: C,
+        constraint_manager: ConstraintManager<P>,
+        penalty_weight: f64,
+    ) -> Self {
         Self {
             challenge,
             constraint_manager,
@@ -607,7 +627,7 @@ where
     fn score(&self, phenotype: &P) -> f64 {
         let base_score = self.challenge.score(phenotype);
         let penalty = self.constraint_manager.total_penalty_score(phenotype) * self.penalty_weight;
-        
+
         // Adjust score based on penalty (lower is worse)
         base_score - penalty
     }
@@ -823,7 +843,7 @@ mod tests {
         // Test that the default builder creates an empty manager
         let builder = ConstraintManagerBuilder::<TestPhenotype>::default();
         let manager = builder.build();
-        
+
         assert_eq!(manager.len(), 0);
         assert!(manager.is_empty());
     }
@@ -863,11 +883,7 @@ mod tests {
         let challenge = PenaltyTestChallenge::default();
 
         // Create a penalty-adjusted challenge
-        let penalty_challenge = PenaltyAdjustedChallenge::new(
-            challenge,
-            constraint_manager,
-            5.0,
-        );
+        let penalty_challenge = PenaltyAdjustedChallenge::new(challenge, constraint_manager, 5.0);
 
         // Check accessors
         assert_eq!(penalty_challenge.penalty_weight(), 5.0);

@@ -9,7 +9,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-use crate::constraints::{Constraint, ConstraintViolation, ConstraintError};
+use crate::constraints::{Constraint, ConstraintError, ConstraintViolation};
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 
@@ -65,7 +65,7 @@ where
             _marker: PhantomData,
         })
     }
-    
+
     /// Returns the name of the constraint.
     pub fn name(&self) -> &str {
         &self.name
@@ -161,7 +161,9 @@ where
             return Err(ConstraintError::EmptyName);
         }
         if required_keys.is_empty() {
-            return Err(ConstraintError::EmptyCollection("Required keys set".to_string()));
+            return Err(ConstraintError::EmptyCollection(
+                "Required keys set".to_string(),
+            ));
         }
         Ok(Self {
             name,
@@ -365,7 +367,9 @@ where
             return Err(ConstraintError::EmptyName);
         }
         if dependencies.is_empty() {
-            return Err(ConstraintError::EmptyCollection("Dependencies vector".to_string()));
+            return Err(ConstraintError::EmptyCollection(
+                "Dependencies vector".to_string(),
+            ));
         }
         Ok(Self {
             name,
@@ -482,7 +486,7 @@ mod tests {
         // Test that empty names are rejected
         let empty_name = "".to_string();
         let valid_name = "Test".to_string();
-        
+
         // Check that empty names are rejected
         assert!(empty_name.is_empty());
         assert!(!valid_name.is_empty());
@@ -493,14 +497,14 @@ mod tests {
         // Test that empty collections are rejected
         let empty_keys: HashSet<i32> = HashSet::new();
         let valid_keys: HashSet<i32> = [1, 2, 3].iter().cloned().collect();
-        
+
         let empty_deps: Vec<(i32, i32)> = Vec::new();
         let valid_deps: Vec<(i32, i32)> = vec![(1, 2), (2, 3)];
-        
+
         // Check that empty collections are rejected
         assert!(empty_keys.is_empty());
         assert!(!valid_keys.is_empty());
-        
+
         assert!(empty_deps.is_empty());
         assert!(!valid_deps.is_empty());
     }
