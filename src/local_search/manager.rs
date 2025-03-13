@@ -18,7 +18,7 @@ use std::marker::PhantomData;
 /// The `LocalSearchManager` determines which individuals should undergo local search
 /// based on a configurable application strategy, and applies the specified local search
 /// algorithm to those individuals.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct LocalSearchManager<P, L, A, C>
 where
     P: Phenotype,
