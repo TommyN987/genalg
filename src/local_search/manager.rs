@@ -86,12 +86,7 @@ where
     /// - The fitness vector length doesn't match the population length
     /// - The selection process requires randomness but `rng` is `None`
     /// - The selection process encounters an error (e.g., random number generation fails)
-    pub fn apply(
-        &self,
-        population: &mut [P],
-        fitness: &[f64],
-        challenge: &C,
-    ) -> Result<Vec<bool>> {
+    pub fn apply(&self, population: &mut [P], fitness: &[f64], challenge: &C) -> Result<Vec<bool>> {
         self.validate_inputs(population, fitness)?;
 
         // Select individuals for local search
@@ -185,7 +180,9 @@ mod tests {
         let all_strategy = AllIndividualsStrategy::new();
         let manager = LocalSearchManager::new(hill_climbing, all_strategy);
 
-        let result = manager.apply(&mut population, &fitness, &challenge).unwrap();
+        let result = manager
+            .apply(&mut population, &fitness, &challenge)
+            .unwrap();
 
         // All individuals should have been selected for local search
         assert_eq!(result.len(), 3);
@@ -207,7 +204,9 @@ mod tests {
         let top_strategy = TopNStrategy::new_minimizing(1); // Only the best individual
         let manager = LocalSearchManager::new(hill_climbing, top_strategy);
 
-        let result = manager.apply(&mut population, &fitness, &challenge).unwrap();
+        let result = manager
+            .apply(&mut population, &fitness, &challenge)
+            .unwrap();
 
         // All individuals should have a result
         assert_eq!(result.len(), 3);

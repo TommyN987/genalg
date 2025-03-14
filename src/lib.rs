@@ -74,6 +74,7 @@
 //! #     fn mutate(&mut self, rng: &mut genalg::rng::RandomNumberGenerator) {}
 //! # }
 //!
+//! #[derive(Clone)]
 //! struct MyChallenge {
 //!     target: f64,
 //! }
@@ -120,6 +121,7 @@
 //!     rng::RandomNumberGenerator,
 //!     strategy::ordinary::OrdinaryStrategy,
 //!     selection::ElitistSelection,
+//!     local_search::{HillClimbing, AllIndividualsStrategy},
 //! };
 //!
 //! #[derive(Clone, Debug)]
@@ -133,6 +135,7 @@
 //! #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
 //! # }
 //!
+//! #[derive(Clone)]
 //! struct MyChallenge {
 //!     target: f64,
 //! }
@@ -152,7 +155,14 @@
 //! let starting_value = MyPhenotype { value: 0.0 };
 //!
 //! // Create launcher with breeding and selection strategies
-//! let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
+//! let launcher: EvolutionLauncher<
+//!     MyPhenotype,
+//!     OrdinaryStrategy,
+//!     ElitistSelection,
+//!     HillClimbing,
+//!     MyChallenge,
+//!     AllIndividualsStrategy
+//! > = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
 //!
 //! // Configure and run the evolution
 //! let result = launcher
