@@ -138,6 +138,7 @@ where
             launcher: self,
             options,
             starting_value,
+            use_local_search: false,
             seed: None,
         }
     }
@@ -162,6 +163,7 @@ where
         options: &EvolutionOptions,
         rng: &mut RandomNumberGenerator,
         starting_value: P,
+        use_local_search: bool,
     ) -> Result<EvolutionResult<P>> {
         if options.get_population_size() == 0 {
             return Err(GeneticError::Configuration(
@@ -175,15 +177,18 @@ where
             ));
         }
 
-        let mut candidates: Vec<P> = Vec::new();
         let mut fitness: Vec<EvolutionResult<P>> = Vec::new();
+
+        // Initialize the population
+        let mut candidates: Vec<P> = Vec::new();
         let mut parents: Vec<P> = vec![starting_value];
+        self.breed(&mut candidates, &parents, &options, rng, 0)?;
 
         for generation in 0..options.get_num_generations() {
-            candidates.clear();
+            let population: Vec<P> = candidates.to_vec();
+            let scores: Vec<f64> = fitness.iter().map(|f| f.score).collect();
 
-            self.breed(&mut candidates, &parents, &options, rng, generation)?;
-
+            // 1. Evaluation
             if candidates.len() >= options.get_parallel_threshold() {
                 fitness = self.fitness_parallel(&candidates, &self.challenge)?;
             } else {
@@ -205,22 +210,33 @@ where
                 LogLevel::None => {}
             }
 
-            if fitness.is_empty() {
-                return Err(GeneticError::Evolution(format!(
-                    "No viable candidates produced in generation {}",
-                    generation
-                )));
-            }
-
-            let population: Vec<P> = candidates.to_vec();
-            let scores: Vec<f64> = fitness.iter().map(|f| f.score).collect();
-
+            // 2. Selection
             parents = self.selection_strategy.select(
                 &population,
                 &scores,
                 options.get_population_size(),
                 Some(rng),
             )?;
+
+            // 3. Breeding
+            self.breed(&mut candidates, &parents, &options, rng, generation)?;
+
+            // 4. Local Search
+            if use_local_search {
+                match &self.local_search_manager {
+                    Some(manager) => {
+                        manager.apply(&mut candidates, &fitness.iter().map(|f| f.score).collect::<Vec<f64>>(), &self.challenge)?;
+                    },
+                    None => return Err(GeneticError::Configuration("Local search algorithm not provided".to_string())),
+                }
+            }
+
+            if fitness.is_empty() {
+                return Err(GeneticError::Evolution(format!(
+                    "No viable candidates produced in generation {}",
+                    generation
+                )));
+            }
         }
 
         fitness.sort_by(|a, b| {
@@ -322,6 +338,7 @@ where
     launcher: &'a EvolutionLauncher<P, B, S, LS, F, A>,
     options: EvolutionOptions,
     starting_value: P,
+    use_local_search: bool,
     seed: Option<u64>,
 }
 
@@ -345,6 +362,11 @@ where
     /// The `EvolutionProcess` with the seed configured.
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
+        self
+    }
+
+    pub fn with_local_search(mut self) -> Self {
+        self.use_local_search = true;
         self
     }
 
@@ -378,6 +400,6 @@ where
         };
 
         self.launcher
-            .evolve(&self.options, &mut rng, self.starting_value)
+            .evolve(&self.options, &mut rng, self.starting_value, self.use_local_search)
     }
 }
