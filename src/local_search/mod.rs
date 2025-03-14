@@ -116,11 +116,7 @@ where
     P: Phenotype,
     C: Challenge<P>,
 {
-    fn search(
-        &self,
-        phenotype: &mut P,
-        challenge: &C,
-    ) -> bool {
+    fn search(&self, phenotype: &mut P, challenge: &C) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_score = initial_score;
         let mut improved = false;
@@ -221,11 +217,7 @@ where
     P: Phenotype,
     C: Challenge<P>,
 {
-    fn search(
-        &self,
-        phenotype: &mut P,
-        challenge: &C,
-    ) -> bool {
+    fn search(&self, phenotype: &mut P, challenge: &C) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_score = initial_score;
         let mut current_solution = phenotype.clone();
@@ -346,11 +338,7 @@ where
     P: Phenotype + Eq,
     C: Challenge<P>,
 {
-    fn search(
-        &self,
-        phenotype: &mut P,
-        challenge: &C,
-    ) -> bool {
+    fn search(&self, phenotype: &mut P, challenge: &C) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_solution = phenotype.clone();
         let mut current_score = initial_score;

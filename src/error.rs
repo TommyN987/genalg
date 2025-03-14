@@ -77,6 +77,7 @@
 //!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //!     phenotype::Phenotype,
 //!     strategy::OrdinaryStrategy,
+//!     selection::ElitistSelection,
 //! };
 //! use std::fs::File;
 //! use std::io::{self, Read};
@@ -88,6 +89,7 @@
 //! #     fn crossover(&mut self, other: &Self) { self.value = (self.value + other.value) / 2.0; }
 //! #     fn mutate(&mut self, _rng: &mut genalg::rng::RandomNumberGenerator) { }
 //! # }
+//! # #[derive(Clone)]
 //! # struct MyChallenge { target: f64 }
 //! # impl Challenge<MyPhenotype> for MyChallenge {
 //! #     fn score(&self, phenotype: &MyPhenotype) -> f64 { 1.0 / (phenotype.value - self.target).abs().max(0.001) }
@@ -139,7 +141,15 @@
 //!     let strategy = OrdinaryStrategy::default();
 //!     
 //!     // Run the evolution, handling potential errors
-//!     let launcher = EvolutionLauncher::with_default_selection(strategy, challenge);
+//!     let selection_strategy = ElitistSelection::default();
+//!     let launcher: EvolutionLauncher<
+//!         MyPhenotype,
+//!         OrdinaryStrategy,
+//!         ElitistSelection,
+//!         genalg::local_search::HillClimbing,
+//!         MyChallenge,
+//!         genalg::local_search::AllIndividualsStrategy
+//!     > = EvolutionLauncher::new(strategy, selection_strategy, None, challenge);
 //!     let result = launcher
 //!         .configure(options, starting_value)
 //!         .run()?;

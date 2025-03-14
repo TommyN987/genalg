@@ -103,6 +103,7 @@ where
     /// #     rng::RandomNumberGenerator,
     /// #     strategy::OrdinaryStrategy,
     /// #     selection::ElitistSelection,
+    /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// # };
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
@@ -114,6 +115,7 @@ where
     /// #         self.value += *delta as f64;
     /// #     }
     /// # }
+    /// # #[derive(Clone)]
     /// # struct MyChallenge { target: f64 }
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, phenotype: &MyPhenotype) -> f64 { 1.0 / (phenotype.value - self.target).abs().max(0.001) }
@@ -123,7 +125,14 @@ where
     /// # let challenge = MyChallenge { target: 42.0 };
     /// # let options = EvolutionOptions::default();
     /// # let starting_value = MyPhenotype { value: 0.0 };
-    /// let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
+    /// let launcher: EvolutionLauncher<
+    ///     MyPhenotype,
+    ///     OrdinaryStrategy,
+    ///     ElitistSelection,
+    ///     HillClimbing,
+    ///     MyChallenge,
+    ///     AllIndividualsStrategy
+    /// > = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
     /// let result = launcher
     ///     .configure(options, starting_value)
     ///     .with_seed(42)  // Optional: Set a specific seed
@@ -182,11 +191,10 @@ where
         // Initialize the population
         let mut candidates: Vec<P> = Vec::new();
         let mut parents: Vec<P> = vec![starting_value];
-        self.breed(&mut candidates, &parents, &options, rng, 0)?;
+        self.breed(&mut candidates, &parents, options, rng, 0)?;
 
         for generation in 0..options.get_num_generations() {
             let population: Vec<P> = candidates.to_vec();
-            let scores: Vec<f64> = fitness.iter().map(|f| f.score).collect();
 
             // 1. Evaluation
             if candidates.len() >= options.get_parallel_threshold() {
@@ -194,6 +202,9 @@ where
             } else {
                 fitness = self.fitness_sequential(&candidates, &self.challenge)?;
             }
+
+            // Extract scores from the newly calculated fitness
+            let scores: Vec<f64> = fitness.iter().map(|f| f.score).collect();
 
             match options.get_log_level() {
                 LogLevel::Info => info!(generation, "Evolution progress"),
@@ -219,15 +230,19 @@ where
             )?;
 
             // 3. Breeding
-            self.breed(&mut candidates, &parents, &options, rng, generation)?;
+            self.breed(&mut candidates, &parents, options, rng, generation)?;
 
             // 4. Local Search
             if use_local_search {
                 match &self.local_search_manager {
                     Some(manager) => {
-                        manager.apply(&mut candidates, &fitness.iter().map(|f| f.score).collect::<Vec<f64>>(), &self.challenge)?;
-                    },
-                    None => return Err(GeneticError::Configuration("Local search algorithm not provided".to_string())),
+                        manager.apply(&mut candidates, &scores, &self.challenge)?;
+                    }
+                    None => {
+                        return Err(GeneticError::Configuration(
+                            "Local search algorithm not provided".to_string(),
+                        ))
+                    }
                 }
             }
 
@@ -266,14 +281,15 @@ where
         rng: &mut RandomNumberGenerator,
         generation: usize,
     ) -> std::result::Result<(), GeneticError> {
-        match self.breed_strategy.breed(&parents, options, rng) {
-            Ok(bred_candidates) => Ok(candidates.extend(bred_candidates)),
-            Err(e) => {
-                return Err(GeneticError::Breeding(format!(
-                    "Failed to breed candidates in generation {}: {}",
-                    generation, e
-                )));
+        match self.breed_strategy.breed(parents, options, rng) {
+            Ok(bred_candidates) => {
+                candidates.extend(bred_candidates);
+                Ok(())
             }
+            Err(e) => Err(GeneticError::Breeding(format!(
+                "Failed to breed candidates in generation {}: {}",
+                generation, e
+            ))),
         }
     }
 
@@ -299,7 +315,11 @@ where
             .collect()
     }
 
-    fn fitness_sequential(&self, candidates: &[P], challenge: &F) -> Result<Vec<EvolutionResult<P>>> {
+    fn fitness_sequential(
+        &self,
+        candidates: &[P],
+        challenge: &F,
+    ) -> Result<Vec<EvolutionResult<P>>> {
         candidates
             .iter()
             .map(|candidate| {
@@ -399,7 +419,11 @@ where
             None => RandomNumberGenerator::new(),
         };
 
-        self.launcher
-            .evolve(&self.options, &mut rng, self.starting_value, self.use_local_search)
+        self.launcher.evolve(
+            &self.options,
+            &mut rng,
+            self.starting_value,
+            self.use_local_search,
+        )
     }
 }
