@@ -182,65 +182,14 @@ where
         for generation in 0..options.get_num_generations() {
             candidates.clear();
 
-            match self.breed_strategy.breed(&parents, options, rng) {
-                Ok(bred_candidates) => candidates.extend(bred_candidates),
-                Err(e) => {
-                    return Err(GeneticError::Breeding(format!(
-                        "Failed to breed candidates in generation {}: {}",
-                        generation, e
-                    )));
-                }
-            }
+            self.breed(&mut candidates, &parents, &options, rng, generation)?;
 
-            // Only use parallelism if we have enough candidates to make it worthwhile
-            let parallel_threshold = options.get_parallel_threshold();
-
-            if candidates.len() >= parallel_threshold {
-                // Parallel fitness evaluation
-                let parallel_fitness: Result<Vec<_>> = candidates
-                    .par_iter()
-                    .map(|candidate| {
-                        let score = self.challenge.score(candidate);
-
-                        // Check for invalid fitness scores
-                        if !score.is_finite() {
-                            return Err(GeneticError::FitnessCalculation(format!(
-                                "Non-finite fitness score encountered: {}",
-                                score
-                            )));
-                        }
-
-                        Ok(EvolutionResult {
-                            pheno: candidate.clone(),
-                            score,
-                        })
-                    })
-                    .collect();
-
-                // Handle any errors from parallel evaluation
-                fitness = parallel_fitness?;
+            if candidates.len() >= options.get_parallel_threshold() {
+                fitness = self.fitness_parallel(&candidates, &self.challenge)?;
             } else {
-                // Sequential fitness evaluation for small populations
-                fitness.clear();
-                for candidate in &candidates {
-                    let score = self.challenge.score(candidate);
-
-                    // Check for invalid fitness scores
-                    if !score.is_finite() {
-                        return Err(GeneticError::FitnessCalculation(format!(
-                            "Non-finite fitness score encountered: {}",
-                            score
-                        )));
-                    }
-
-                    fitness.push(EvolutionResult {
-                        pheno: candidate.clone(),
-                        score,
-                    });
-                }
+                fitness = self.fitness_sequential(&candidates, &self.challenge)?;
             }
 
-            // Log progress if requested
             match options.get_log_level() {
                 LogLevel::Info => info!(generation, "Evolution progress"),
                 LogLevel::Debug => {
@@ -256,7 +205,6 @@ where
                 LogLevel::None => {}
             }
 
-            // Ensure we have at least one fitness result
             if fitness.is_empty() {
                 return Err(GeneticError::Evolution(format!(
                     "No viable candidates produced in generation {}",
@@ -264,11 +212,9 @@ where
                 )));
             }
 
-            // Extract phenotypes and scores for selection
             let population: Vec<P> = candidates.to_vec();
             let scores: Vec<f64> = fitness.iter().map(|f| f.score).collect();
 
-            // Use the selection strategy to select parents for the next generation
             parents = self.selection_strategy.select(
                 &population,
                 &scores,
@@ -277,10 +223,8 @@ where
             )?;
         }
 
-        // Return the best result
         fitness.sort_by(|a, b| {
             b.score.partial_cmp(&a.score).unwrap_or_else(|| {
-                // Handle NaN values by considering them less than any other value
                 if b.score.is_nan() {
                     std::cmp::Ordering::Less
                 } else if a.score.is_nan() {
@@ -296,6 +240,68 @@ where
                 "Evolution completed but no viable candidates were produced".to_string(),
             )
         })
+    }
+
+    fn breed(
+        &self,
+        candidates: &mut Vec<P>,
+        parents: &[P],
+        options: &EvolutionOptions,
+        rng: &mut RandomNumberGenerator,
+        generation: usize,
+    ) -> std::result::Result<(), GeneticError> {
+        match self.breed_strategy.breed(&parents, options, rng) {
+            Ok(bred_candidates) => Ok(candidates.extend(bred_candidates)),
+            Err(e) => {
+                return Err(GeneticError::Breeding(format!(
+                    "Failed to breed candidates in generation {}: {}",
+                    generation, e
+                )));
+            }
+        }
+    }
+
+    fn fitness_parallel(&self, candidates: &[P], challenge: &F) -> Result<Vec<EvolutionResult<P>>> {
+        candidates
+            .par_iter()
+            .map(|candidate| {
+                let score = challenge.score(candidate);
+
+                // Check for invalid fitness scores
+                if !score.is_finite() {
+                    return Err(GeneticError::FitnessCalculation(format!(
+                        "Non-finite fitness score encountered: {}",
+                        score
+                    )));
+                }
+
+                Ok(EvolutionResult {
+                    pheno: candidate.clone(),
+                    score,
+                })
+            })
+            .collect()
+    }
+
+    fn fitness_sequential(&self, candidates: &[P], challenge: &F) -> Result<Vec<EvolutionResult<P>>> {
+        candidates
+            .iter()
+            .map(|candidate| {
+                let score = challenge.score(candidate);
+
+                if !score.is_finite() {
+                    return Err(GeneticError::FitnessCalculation(format!(
+                        "Non-finite fitness score encountered: {}",
+                        score
+                    )));
+                }
+
+                Ok(EvolutionResult {
+                    pheno: candidate.clone(),
+                    score,
+                })
+            })
+            .collect()
     }
 }
 
