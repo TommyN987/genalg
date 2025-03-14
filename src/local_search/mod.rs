@@ -29,18 +29,6 @@ where
     ///
     /// Returns `true` if the phenotype was improved, `false` otherwise.
     fn search(&self, phenotype: &mut P, challenge: &C) -> bool;
-
-    /// Applies the local search algorithm to the given phenotype using a random number generator.
-    ///
-    /// This method is useful for local search algorithms that require randomness.
-    ///
-    /// Returns `true` if the phenotype was improved, `false` otherwise.
-    fn search_with_rng(
-        &self,
-        phenotype: &mut P,
-        challenge: &C,
-        rng: &mut RandomNumberGenerator,
-    ) -> bool;
 }
 
 // Re-export key types for convenience
@@ -128,20 +116,15 @@ where
     P: Phenotype,
     C: Challenge<P>,
 {
-    fn search(&self, phenotype: &mut P, challenge: &C) -> bool {
-        let mut rng = RandomNumberGenerator::new();
-        self.search_with_rng(phenotype, challenge, &mut rng)
-    }
-
-    fn search_with_rng(
+    fn search(
         &self,
         phenotype: &mut P,
         challenge: &C,
-        rng: &mut RandomNumberGenerator,
     ) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_score = initial_score;
         let mut improved = false;
+        let mut rng = RandomNumberGenerator::new();
 
         for _ in 0..self.max_iterations {
             let mut best_neighbor = phenotype.clone();
@@ -151,7 +134,7 @@ where
             // Evaluate neighbors
             for _ in 0..self.max_neighbors {
                 let mut neighbor = phenotype.clone();
-                neighbor.mutate(rng);
+                neighbor.mutate(&mut rng);
                 let neighbor_score = challenge.score(&neighbor);
 
                 if neighbor_score > best_neighbor_score {
@@ -238,27 +221,22 @@ where
     P: Phenotype,
     C: Challenge<P>,
 {
-    fn search(&self, phenotype: &mut P, challenge: &C) -> bool {
-        let mut rng = RandomNumberGenerator::new();
-        self.search_with_rng(phenotype, challenge, &mut rng)
-    }
-
-    fn search_with_rng(
+    fn search(
         &self,
         phenotype: &mut P,
         challenge: &C,
-        rng: &mut RandomNumberGenerator,
     ) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_score = initial_score;
         let mut current_solution = phenotype.clone();
         let mut temperature = self.initial_temperature;
         let mut improved = false;
+        let mut rng = RandomNumberGenerator::new();
 
         for _ in 0..self.max_iterations {
             // Generate a neighbor
             let mut neighbor = current_solution.clone();
-            neighbor.mutate(rng);
+            neighbor.mutate(&mut rng);
             let neighbor_score = challenge.score(&neighbor);
 
             // Decide whether to move to the neighbor
@@ -368,16 +346,10 @@ where
     P: Phenotype + Eq,
     C: Challenge<P>,
 {
-    fn search(&self, phenotype: &mut P, challenge: &C) -> bool {
-        let mut rng = RandomNumberGenerator::new();
-        self.search_with_rng(phenotype, challenge, &mut rng)
-    }
-
-    fn search_with_rng(
+    fn search(
         &self,
         phenotype: &mut P,
         challenge: &C,
-        rng: &mut RandomNumberGenerator,
     ) -> bool {
         let initial_score = challenge.score(phenotype);
         let mut current_solution = phenotype.clone();
@@ -386,6 +358,7 @@ where
         let mut best_score = current_score;
         let mut tabu_list = Vec::new();
         let mut improved = false;
+        let mut rng = RandomNumberGenerator::new();
 
         for _ in 0..self.max_iterations {
             let mut best_neighbor = current_solution.clone();
@@ -395,7 +368,7 @@ where
             // Evaluate neighbors
             for _ in 0..self.max_neighbors {
                 let mut neighbor = current_solution.clone();
-                neighbor.mutate(rng);
+                neighbor.mutate(&mut rng);
                 let neighbor_score = challenge.score(&neighbor);
 
                 // Check if the neighbor is not in the tabu list
@@ -483,23 +456,6 @@ where
 
         for algorithm in &self.algorithms {
             if algorithm.search(phenotype, challenge) {
-                improved = true;
-            }
-        }
-
-        improved
-    }
-
-    fn search_with_rng(
-        &self,
-        phenotype: &mut P,
-        challenge: &C,
-        rng: &mut RandomNumberGenerator,
-    ) -> bool {
-        let mut improved = false;
-
-        for algorithm in &self.algorithms {
-            if algorithm.search_with_rng(phenotype, challenge, rng) {
                 improved = true;
             }
         }
@@ -640,20 +596,6 @@ mod tests {
         let mut phenotype = TestPhenotype { value: 0 };
 
         let _improved = hybrid.search(&mut phenotype, &challenge);
-
-        // The phenotype should be closer to the target
-        assert!(phenotype.value != 0);
-        assert!(challenge.get_evaluations() > 0);
-    }
-
-    #[test]
-    fn test_search_with_rng() {
-        let hill_climbing = HillClimbing::new(10).unwrap();
-        let challenge = TestChallenge::new(50);
-        let mut phenotype = TestPhenotype { value: 0 };
-        let mut rng = RandomNumberGenerator::new();
-
-        let _improved = hill_climbing.search_with_rng(&mut phenotype, &challenge, &mut rng);
 
         // The phenotype should be closer to the target
         assert!(phenotype.value != 0);
