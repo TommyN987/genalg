@@ -51,9 +51,13 @@ where
 
     pub fn with_local_search_manager(
         mut self,
-        local_search_manager: LocalSearchManager<P, LS, A, F>,
+        local_search_strategy: LS,
+        local_search_application_strategy: A,
     ) -> Self {
-        self.local_search_manager = Some(local_search_manager);
+        self.local_search_manager = Some(LocalSearchManager::new(
+            local_search_strategy,
+            local_search_application_strategy,
+        ));
         self
     }
 
