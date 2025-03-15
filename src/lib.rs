@@ -205,8 +205,8 @@
 //!     MyChallenge,
 //!     AllIndividualsStrategy
 //! > = EvolutionLauncher::new(
-//!     breed_strategy, 
-//!     selection_strategy, 
+//!     breed_strategy,
+//!     selection_strategy,
 //!     None, // No local search
 //!     challenge
 //! );
@@ -229,34 +229,34 @@
 //! #     selection::ElitistSelection,
 //! #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
 //! # };
-//! # 
+//! #
 //! # #[derive(Clone, Debug)]
 //! # struct MyPhenotype {
 //! #     value: f64,
 //! # }
-//! # 
+//! #
 //! # impl Phenotype for MyPhenotype {
 //! #     fn crossover(&mut self, other: &Self) {}
 //! #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
 //! # }
-//! # 
+//! #
 //! # #[derive(Clone)]
 //! # struct MyChallenge {
 //! #     target: f64,
 //! # }
-//! # 
+//! #
 //! # impl Challenge<MyPhenotype> for MyChallenge {
 //! #     fn score(&self, phenotype: &MyPhenotype) -> f64 {
 //! #         1.0 / (phenotype.value - self.target).abs().max(0.001)
 //! #     }
 //! # }
-//! # 
+//! #
 //! # let breed_strategy = OrdinaryStrategy::default();
 //! # let selection_strategy = ElitistSelection::default();
 //! # let challenge = MyChallenge { target: 42.0 };
 //! # let options = EvolutionOptions::default();
 //! # let starting_value = MyPhenotype { value: 0.0 };
-//! 
+//!
 //! // Create a local search manager
 //! let hill_climbing = HillClimbing::new(10).unwrap();
 //! let application_strategy = AllIndividualsStrategy::new();
@@ -273,9 +273,9 @@
 //!     MyChallenge,
 //!     AllIndividualsStrategy
 //! > = EvolutionLauncher::new(
-//!     breed_strategy, 
-//!     selection_strategy, 
-//!     local_search_manager, 
+//!     breed_strategy,
+//!     selection_strategy,
+//!     local_search_manager,
 //!     challenge
 //! );
 //!
@@ -299,28 +299,28 @@
 //! #     local_search::{HillClimbing, AllIndividualsStrategy},
 //! #     error::Result,
 //! # };
-//! # 
+//! #
 //! # #[derive(Clone, Debug)]
 //! # struct MyPhenotype {
 //! #     value: f64,
 //! # }
-//! # 
+//! #
 //! # impl Phenotype for MyPhenotype {
 //! #     fn crossover(&mut self, other: &Self) {}
 //! #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
 //! # }
-//! # 
+//! #
 //! # #[derive(Clone)]
 //! # struct MyChallenge {
 //! #     target: f64,
 //! # }
-//! # 
+//! #
 //! # impl Challenge<MyPhenotype> for MyChallenge {
 //! #     fn score(&self, phenotype: &MyPhenotype) -> f64 {
 //! #         1.0 / (phenotype.value - self.target).abs().max(0.001)
 //! #     }
 //! # }
-//! 
+//!
 //! fn create_launcher() -> Result<EvolutionLauncher<
 //!     MyPhenotype,
 //!     OrdinaryStrategy,

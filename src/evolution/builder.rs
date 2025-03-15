@@ -60,20 +60,20 @@ where
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// // Create a new builder
     /// let builder = EvolutionLauncher::<
     ///     MyPhenotype,
@@ -113,22 +113,22 @@ where
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// let breed_strategy = OrdinaryStrategy::default();
-    /// 
+    ///
     /// let builder = EvolutionLauncher::<
     ///     MyPhenotype,
     ///     OrdinaryStrategy,
@@ -164,22 +164,22 @@ where
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// let selection_strategy = ElitistSelection::default();
-    /// 
+    ///
     /// let builder = EvolutionLauncher::<
     ///     MyPhenotype,
     ///     OrdinaryStrategy,
@@ -220,20 +220,20 @@ where
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
     /// # use genalg::error::Result;
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// fn create_builder() -> Result<EvolutionLauncher<
     ///     MyPhenotype,
     ///     OrdinaryStrategy,
@@ -285,22 +285,22 @@ where
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// let challenge = MyChallenge;
-    /// 
+    ///
     /// let builder = EvolutionLauncher::<
     ///     MyPhenotype,
     ///     OrdinaryStrategy,
@@ -344,20 +344,20 @@ where
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
     /// # use genalg::error::Result;
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// fn create_launcher() -> Result<EvolutionLauncher<
     ///     MyPhenotype,
     ///     OrdinaryStrategy,

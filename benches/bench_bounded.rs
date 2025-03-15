@@ -2,7 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
-    local_search::{HillClimbing, AllIndividualsStrategy},
+    local_search::{AllIndividualsStrategy, HillClimbing},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
@@ -81,13 +81,8 @@ fn bench_bounded(c: &mut Criterion) {
         ElitistSelection,
         HillClimbing,
         XCoordinateChallenge,
-        AllIndividualsStrategy
-    > = EvolutionLauncher::new(
-        breed_strategy, 
-        selection_strategy, 
-        None, 
-        challenge
-    );
+        AllIndividualsStrategy,
+    > = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
 
     c.bench_function("bounded_evolution", |b| {
         b.iter(|| {
