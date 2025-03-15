@@ -174,7 +174,7 @@ where
 mod tests {
     use crate::{
         evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
-        strategy::BreedStrategy,
+        breeding::BreedStrategy,
     };
 
     #[allow(unused)]

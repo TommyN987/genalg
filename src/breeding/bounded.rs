@@ -19,7 +19,7 @@ use crate::{
     evolution::options::LogLevel,
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
-    strategy::BreedStrategy,
+    breeding::BreedStrategy,
 };
 
 /// Trait for phenotypes that have a measurable magnitude with defined bounds.
@@ -89,7 +89,7 @@ impl BoundedBreedConfig {
     /// # Example
     ///
     /// ```rust
-    /// use genalg::strategy::{BoundedBreedConfig, BoundedBreedConfigBuilder};
+    /// use  genalg::breeding::{BoundedBreedConfig, BoundedBreedConfigBuilder};
     ///
     /// let config = BoundedBreedConfig::builder()
     ///     .max_development_attempts(2000)
@@ -166,7 +166,7 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use genalg::strategy::{BoundedBreedStrategy, BoundedBreedConfig, Magnitude};
+    /// use  genalg::breeding::{BoundedBreedStrategy, BoundedBreedConfig, Magnitude};
     /// use genalg::phenotype::Phenotype;
     /// use genalg::rng::RandomNumberGenerator;
     ///

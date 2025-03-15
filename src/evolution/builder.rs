@@ -56,7 +56,7 @@ where
     /// # use genalg::evolution::EvolutionLauncher;
     /// # use genalg::phenotype::Phenotype;
     /// # use genalg::rng::RandomNumberGenerator;
-    /// # use genalg::strategy::OrdinaryStrategy;
+    /// # use  genalg::breeding::OrdinaryStrategy;
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
@@ -109,7 +109,7 @@ where
     /// # use genalg::evolution::EvolutionLauncher;
     /// # use genalg::phenotype::Phenotype;
     /// # use genalg::rng::RandomNumberGenerator;
-    /// # use genalg::strategy::OrdinaryStrategy;
+    /// # use  genalg::breeding::OrdinaryStrategy;
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
@@ -160,7 +160,7 @@ where
     /// # use genalg::evolution::EvolutionLauncher;
     /// # use genalg::phenotype::Phenotype;
     /// # use genalg::rng::RandomNumberGenerator;
-    /// # use genalg::strategy::OrdinaryStrategy;
+    /// # use  genalg::breeding::OrdinaryStrategy;
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
@@ -215,7 +215,7 @@ where
     /// # use genalg::evolution::EvolutionLauncher;
     /// # use genalg::phenotype::Phenotype;
     /// # use genalg::rng::RandomNumberGenerator;
-    /// # use genalg::strategy::OrdinaryStrategy;
+    /// # use  genalg::breeding::OrdinaryStrategy;
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
@@ -281,7 +281,7 @@ where
     /// # use genalg::evolution::EvolutionLauncher;
     /// # use genalg::phenotype::Phenotype;
     /// # use genalg::rng::RandomNumberGenerator;
-    /// # use genalg::strategy::OrdinaryStrategy;
+    /// # use  genalg::breeding::OrdinaryStrategy;
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;
@@ -339,7 +339,7 @@ where
     /// # use genalg::evolution::EvolutionLauncher;
     /// # use genalg::phenotype::Phenotype;
     /// # use genalg::rng::RandomNumberGenerator;
-    /// # use genalg::strategy::OrdinaryStrategy;
+    /// # use  genalg::breeding::OrdinaryStrategy;
     /// # use genalg::selection::ElitistSelection;
     /// # use genalg::local_search::{HillClimbing, AllIndividualsStrategy};
     /// # use genalg::evolution::Challenge;

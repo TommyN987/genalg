@@ -7,7 +7,7 @@ use genalg::{
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
-    strategy::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy},
+    breeding::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy},
 };
 
 // Define a phenotype for the test

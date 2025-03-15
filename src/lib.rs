@@ -160,7 +160,7 @@
 //!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //!     phenotype::Phenotype,
 //!     rng::RandomNumberGenerator,
-//!     strategy::OrdinaryStrategy,
+//!     breeding::OrdinaryStrategy,
 //!     selection::ElitistSelection,
 //!     local_search::{HillClimbing, AllIndividualsStrategy},
 //! };
@@ -225,7 +225,7 @@
 //! #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //! #     phenotype::Phenotype,
 //! #     rng::RandomNumberGenerator,
-//! #     strategy::OrdinaryStrategy,
+//! #     breeding::OrdinaryStrategy,
 //! #     selection::ElitistSelection,
 //! #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
 //! # };
@@ -294,7 +294,7 @@
 //! #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //! #     phenotype::Phenotype,
 //! #     rng::RandomNumberGenerator,
-//! #     strategy::OrdinaryStrategy,
+//! #     breeding::OrdinaryStrategy,
 //! #     selection::ElitistSelection,
 //! #     local_search::{HillClimbing, AllIndividualsStrategy},
 //! #     error::Result,
@@ -489,10 +489,10 @@
 //!
 //! [`Phenotype`]: phenotype::Phenotype
 //! [`Challenge`]: evolution::Challenge
-//! [`OrdinaryStrategy`]: strategy::ordinary::OrdinaryStrategy
-//! [`BoundedBreedStrategy`]: strategy::bounded::BoundedBreedStrategy
-//! [`CombinatorialBreedStrategy`]: strategy::combinatorial::CombinatorialBreedStrategy
-//! [`Magnitude`]: strategy::bounded::Magnitude
+//! [`OrdinaryStrategy`]: breeding::ordinary::OrdinaryStrategy
+//! [`BoundedBreedStrategy`]: breeding::bounded::BoundedBreedStrategy
+//! [`CombinatorialBreedStrategy`]: breeding::combinatorial::CombinatorialBreedStrategy
+//! [`Magnitude`]: breeding::bounded::Magnitude
 //! [`EvolutionLauncher`]: evolution::EvolutionLauncher
 //! [`EvolutionOptions`]: evolution::options::EvolutionOptions
 //! [`ThreadLocalRng`]: rng::ThreadLocalRng
@@ -522,7 +522,7 @@ pub mod local_search;
 pub mod phenotype;
 pub mod rng;
 pub mod selection;
-pub mod strategy;
+pub mod breeding;
 
 // Re-export commonly used types for convenience
 pub use caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};
@@ -536,8 +536,8 @@ pub use selection::{
     ElitistSelection, RankBasedSelection, RouletteWheelSelection, SelectionStrategy,
     TournamentSelection,
 };
-pub use strategy::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy};
-pub use strategy::{
+pub use breeding::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy};
+pub use breeding::{
     bounded::{BoundedBreedConfig, BoundedBreedStrategy, Magnitude},
     ordinary::OrdinaryStrategy,
     BreedStrategy,

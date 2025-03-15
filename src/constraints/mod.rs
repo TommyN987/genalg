@@ -160,7 +160,6 @@
 
 use std::error::Error;
 use std::fmt::{Debug, Display};
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::evolution::Challenge;
@@ -292,7 +291,6 @@ where
     P: Phenotype,
 {
     constraints: Vec<Arc<dyn Constraint<P>>>,
-    _marker: PhantomData<P>,
 }
 
 impl<P> ConstraintManager<P>
@@ -303,7 +301,6 @@ where
     pub fn new() -> Self {
         Self {
             constraints: Vec::new(),
-            _marker: PhantomData,
         }
     }
 
@@ -437,7 +434,6 @@ where
     pub fn build(self) -> ConstraintManager<P> {
         ConstraintManager {
             constraints: self.constraints,
-            _marker: PhantomData,
         }
     }
 }
@@ -570,8 +566,6 @@ where
     constraint_manager: ConstraintManager<P>,
     /// The weight to apply to penalties
     penalty_weight: f64,
-    /// Phantom data for the phenotype type
-    _marker: PhantomData<P>,
 }
 
 impl<P, C> PenaltyAdjustedChallenge<P, C>
@@ -599,7 +593,6 @@ where
             challenge,
             constraint_manager,
             penalty_weight,
-            _marker: PhantomData,
         }
     }
 

@@ -12,7 +12,7 @@ use crate::{
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::SelectionStrategy,
-    strategy::BreedStrategy,
+    breeding::BreedStrategy,
     LocalSearch, OptionExt,
 };
 
@@ -89,7 +89,7 @@ where
     /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
     /// #     phenotype::Phenotype,
     /// #     rng::RandomNumberGenerator,
-    /// #     strategy::OrdinaryStrategy,
+    /// #     breeding::OrdinaryStrategy,
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// # };
@@ -156,7 +156,7 @@ where
     /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
     /// #     phenotype::Phenotype,
     /// #     rng::RandomNumberGenerator,
-    /// #     strategy::OrdinaryStrategy,
+    /// #     breeding::OrdinaryStrategy,
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// #     error::Result,
@@ -225,7 +225,7 @@ where
     /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
     /// #     phenotype::Phenotype,
     /// #     rng::RandomNumberGenerator,
-    /// #     strategy::OrdinaryStrategy,
+    /// #     breeding::OrdinaryStrategy,
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// # };
@@ -572,7 +572,7 @@ where
     /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
     /// #     phenotype::Phenotype,
     /// #     rng::RandomNumberGenerator,
-    /// #     strategy::OrdinaryStrategy,
+    /// #     breeding::OrdinaryStrategy,
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// # };
@@ -634,7 +634,7 @@ where
     /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
     /// #     phenotype::Phenotype,
     /// #     rng::RandomNumberGenerator,
-    /// #     strategy::OrdinaryStrategy,
+    /// #     breeding::OrdinaryStrategy,
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
     /// # };

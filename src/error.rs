@@ -76,7 +76,7 @@
 //!     error::{GeneticError, Result, ResultExt, OptionExt},
 //!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //!     phenotype::Phenotype,
-//!     strategy::OrdinaryStrategy,
+//!     breeding::OrdinaryStrategy,
 //!     selection::ElitistSelection,
 //! };
 //! use std::fs::File;
