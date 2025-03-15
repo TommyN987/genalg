@@ -978,7 +978,7 @@ where
         self.cache
             .get()
             .and_then(|cell| cell.try_borrow().ok())
-            .map_or(true, |cache| cache.is_empty())
+            .is_none_or(|cache| cache.is_empty())
     }
 
     /// Returns a copy of the current thread-local cache.
