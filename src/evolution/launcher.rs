@@ -93,24 +93,24 @@ where
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// # };
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// let breed_strategy = OrdinaryStrategy::default();
     /// let selection_strategy = ElitistSelection::default();
     /// let challenge = MyChallenge;
-    /// 
+    ///
     /// // Create a launcher without local search
     /// let launcher: EvolutionLauncher<
     ///     MyPhenotype,
@@ -161,20 +161,20 @@ where
     /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// #     error::Result,
     /// # };
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// 
+    ///
     /// fn create_launcher() -> Result<EvolutionLauncher<
     ///     MyPhenotype,
     ///     OrdinaryStrategy,
@@ -257,7 +257,7 @@ where
     ///     MyChallenge,
     ///     AllIndividualsStrategy
     /// > = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
-    /// 
+    ///
     /// // Basic configuration
     /// let result = launcher
     ///     .configure(options.clone(), starting_value.clone())
@@ -576,20 +576,20 @@ where
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy},
     /// # };
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// # 
+    /// #
     /// # let launcher: EvolutionLauncher<
     /// #     MyPhenotype,
     /// #     OrdinaryStrategy,
@@ -605,7 +605,7 @@ where
     /// # );
     /// # let options = EvolutionOptions::default();
     /// # let starting_value = MyPhenotype { value: 0.0 };
-    /// 
+    ///
     /// // Configure evolution with a fixed seed for reproducibility
     /// let result = launcher
     ///     .configure(options, starting_value)
@@ -638,26 +638,26 @@ where
     /// #     selection::ElitistSelection,
     /// #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
     /// # };
-    /// # 
+    /// #
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
     /// # impl Phenotype for MyPhenotype {
     /// #     fn crossover(&mut self, other: &Self) {}
     /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
     /// # }
-    /// # 
+    /// #
     /// # #[derive(Clone)]
     /// # struct MyChallenge;
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
-    /// # 
+    /// #
     /// # let hill_climbing = HillClimbing::new(10).unwrap();
     /// # let application_strategy = AllIndividualsStrategy::new();
     /// # let local_search_manager = Some(
     /// #     LocalSearchManager::new(hill_climbing, application_strategy)
     /// # );
-    /// # 
+    /// #
     /// # let launcher: EvolutionLauncher<
     /// #     MyPhenotype,
     /// #     OrdinaryStrategy,
@@ -673,7 +673,7 @@ where
     /// # );
     /// # let options = EvolutionOptions::default();
     /// # let starting_value = MyPhenotype { value: 0.0 };
-    /// 
+    ///
     /// // Configure evolution with local search enabled
     /// let result = launcher
     ///     .configure(options, starting_value)

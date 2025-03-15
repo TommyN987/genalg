@@ -2,7 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 
 use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
-    local_search::{HillClimbing, AllIndividualsStrategy},
+    local_search::{AllIndividualsStrategy, HillClimbing},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
@@ -262,7 +262,7 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             ElitistSelection,
             HillClimbing,
             XCoordinateChallenge,
-            AllIndividualsStrategy
+            AllIndividualsStrategy,
         > = EvolutionLauncher::new(
             ordinary_strategy,
             selection_strategy.clone(),
@@ -291,7 +291,7 @@ fn bench_evolution_strategies(c: &mut Criterion) {
             ElitistSelection,
             HillClimbing,
             XCoordinateChallenge,
-            AllIndividualsStrategy
+            AllIndividualsStrategy,
         > = EvolutionLauncher::new(
             bounded_strategy,
             selection_strategy.clone(),

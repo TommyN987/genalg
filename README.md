@@ -13,16 +13,7 @@ GenAlg is a modern, thread-safe genetic algorithm framework designed for flexibi
 - **Flexible**: Adaptable to a wide range of optimization problems
 - **Extensible**: Easy to implement custom phenotypes, fitness functions, and breeding strategies
 - **Parallel Processing**: Automatic parallelization for large populations using Rayon
-
-## API Stability
-
-GenAlg is currently at version 0.1.0, which indicates that the API is still evolving. While we strive to maintain backward compatibility, breaking changes may occur in minor version updates until we reach version 1.0.0. After reaching 1.0.0, we will follow semantic versioning principles:
-
-- **Major version** changes (1.0.0 → 2.0.0) may include breaking API changes
-- **Minor version** changes (1.0.0 → 1.1.0) will be backward compatible but may add new functionality
-- **Patch version** changes (1.0.0 → 1.0.1) will include bug fixes and performance improvements
-
-We recommend pinning to a specific version in your `Cargo.toml` if API stability is critical for your project.
+- **Local Search Integration**: Enhance solutions with integrated local search algorithms
 
 ## Installation
 
@@ -44,6 +35,7 @@ use genalg::{
     rng::RandomNumberGenerator,
     strategy::OrdinaryStrategy,
     selection::ElitistSelection,
+    local_search::{HillClimbing, AllIndividualsStrategy},
 };
 
 // Define your phenotype (the solution representation)
@@ -75,6 +67,7 @@ impl Phenotype for MyPhenotype {
 }
 
 // Define your fitness function
+#[derive(Clone)]
 struct MyChallenge {
     target: f64,
 }
@@ -100,15 +93,37 @@ fn main() {
     let breed_strategy = OrdinaryStrategy::default();
     let selection_strategy = ElitistSelection::default();
     
-    // Create and run the evolution
-    let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
+    // Create and run the evolution without local search
+    let launcher = EvolutionLauncher::new(
+        breed_strategy, 
+        selection_strategy, 
+        None, // No local search
+        challenge
+    );
+    
     let result = launcher
-        .configure(options, starting_value)
+        .configure(options.clone(), starting_value.clone())
         .with_seed(42)  // Optional: Set a specific seed
         .run()
         .unwrap();
     
-    println!("Best solution: {:?}, Fitness: {}", result.pheno, result.score);
+    println!("Best solution without local search: {:?}, Fitness: {}", result.pheno, result.score);
+    
+    // Alternatively, use the builder pattern
+    let launcher = EvolutionLauncher::builder()
+        .with_breed_strategy(OrdinaryStrategy::default())
+        .with_selection_strategy(ElitistSelection::default())
+        .with_challenge(MyChallenge { target: 42.0 })
+        .build()
+        .unwrap();
+        
+    let result = launcher
+        .configure(options, starting_value)
+        .with_seed(42)
+        .run()
+        .unwrap();
+        
+    println!("Best solution using builder: {:?}, Fitness: {}", result.pheno, result.score);
 }
 ```
 
@@ -168,6 +183,15 @@ let options = EvolutionOptions::new_with_threshold(
     50,                 // Number of offspring per generation
     1000,               // Parallel threshold (min items to process in parallel)
 );
+
+// Or use the builder pattern
+let options = EvolutionOptions::builder()
+    .num_generations(100)
+    .log_level(LogLevel::Info)
+    .population_size(10)
+    .num_offspring(50)
+    .parallel_threshold(1000)
+    .build();
 ```
 
 ### Breeding Strategies
@@ -268,6 +292,126 @@ impl<P: Phenotype> SelectionStrategy<P> for MyCustomSelection {
 ```
 
 ## Advanced Usage
+
+### Local Search Integration
+
+GenAlg supports integrating local search algorithms to enhance the quality of solutions:
+
+```rust
+use genalg::{
+    local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
+    evolution::EvolutionLauncher,
+};
+
+// Create a local search algorithm
+let hill_climbing = HillClimbing::new(10).unwrap(); // 10 iterations max
+
+// Create a local search application strategy
+let application_strategy = AllIndividualsStrategy::new();
+
+// Create a local search manager
+let local_search_manager = LocalSearchManager::new(
+    hill_climbing,
+    application_strategy
+);
+
+// Create the launcher with local search
+let launcher = EvolutionLauncher::new(
+    breed_strategy,
+    selection_strategy,
+    Some(local_search_manager),
+    challenge
+);
+
+// Or enable local search during configuration
+let result = launcher
+    .configure(options, starting_value)
+    .with_local_search() // Enable local search
+    .run()
+    .unwrap();
+```
+
+Available local search algorithms:
+
+1. **HillClimbing**: A simple hill climbing algorithm that iteratively makes small improvements.
+
+   ```rust
+   use genalg::local_search::HillClimbing;
+   
+   // Basic hill climbing with default neighbors
+   let hill_climbing = HillClimbing::new(10).unwrap();
+   
+   // With custom number of neighbors to evaluate
+   let hill_climbing = HillClimbing::with_neighbors(10, 5).unwrap();
+   ```
+
+2. **SimulatedAnnealing**: Allows accepting worse solutions with decreasing probability over time.
+
+   ```rust
+   use genalg::local_search::SimulatedAnnealing;
+   
+   // Parameters: max iterations, initial temperature, cooling rate
+   let simulated_annealing = SimulatedAnnealing::new(100, 1.0, 0.95).unwrap();
+   ```
+
+3. **TabuSearch**: Prevents revisiting recently explored solutions.
+
+   ```rust
+   use genalg::local_search::TabuSearch;
+   
+   // Parameters: max iterations, max neighbors, tabu list size
+   let tabu_search = TabuSearch::new(50, 10, 20).unwrap();
+   ```
+
+4. **HybridLocalSearch**: Combines multiple local search algorithms.
+
+   ```rust
+   use genalg::local_search::{HybridLocalSearch, HillClimbing, SimulatedAnnealing};
+   
+   let mut hybrid = HybridLocalSearch::new();
+   hybrid.add_algorithm(HillClimbing::new(5).unwrap())
+         .add_algorithm(SimulatedAnnealing::new(10, 0.5, 0.9).unwrap());
+   ```
+
+Local search application strategies:
+
+1. **AllIndividualsStrategy**: Applies local search to all individuals.
+
+   ```rust
+   use genalg::local_search::AllIndividualsStrategy;
+   
+   let strategy = AllIndividualsStrategy::new();
+   ```
+
+2. **TopNStrategy**: Applies local search to the top N individuals.
+
+   ```rust
+   use genalg::local_search::TopNStrategy;
+   
+   // Apply to top 3 individuals (maximizing)
+   let strategy = TopNStrategy::new_maximizing(3);
+   
+   // Apply to top 3 individuals (minimizing)
+   let strategy = TopNStrategy::new_minimizing(3);
+   ```
+
+3. **TopPercentStrategy**: Applies local search to a percentage of top individuals.
+
+   ```rust
+   use genalg::local_search::TopPercentStrategy;
+   
+   // Apply to top 20% of individuals (maximizing)
+   let strategy = TopPercentStrategy::new_maximizing(0.2).unwrap();
+   ```
+
+4. **ProbabilisticStrategy**: Applies local search with a certain probability.
+
+   ```rust
+   use genalg::local_search::ProbabilisticStrategy;
+   
+   // 30% chance of applying local search to each individual
+   let strategy = ProbabilisticStrategy::new(0.3).unwrap();
+   ```
 
 ### Bounded Evolution
 
@@ -393,7 +537,12 @@ let breed_strategy = MyCustomStrategy::new(0.8, 0.2);
 let selection_strategy = ElitistSelection::default();
 
 // Create the launcher with your strategies
-let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, challenge);
+let launcher = EvolutionLauncher::new(
+    breed_strategy, 
+    selection_strategy, 
+    None, // No local search
+    challenge
+);
 
 // Configure and run the evolution
 let result = launcher
@@ -479,19 +628,13 @@ Use the specialized breeding strategy for combinatorial problems:
 ```rust
 use genalg::strategy::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
 use genalg::constraints::{Constraint, ConstraintManager};
-use genalg::local_search::HillClimbing;
-
-// Create a constraint manager
-let mut constraint_manager = ConstraintManager::new();
-constraint_manager.add_constraint(MyConstraint);
 
 // Configure the breeding strategy
 let config = CombinatorialBreedConfig::builder()
     .repair_probability(0.8)
     .max_repair_attempts(20)
-    .use_elitism(true)
-    .num_elites(2)
-    .local_search_probability(0.1)
+    .use_penalties(true)
+    .penalty_weight(2.5)
     .build();
 
 // Create the breeding strategy
@@ -500,34 +643,13 @@ let mut strategy = CombinatorialBreedStrategy::new(config);
 // Add constraints
 strategy.add_constraint(MyConstraint);
 
-// Add local search (optional)
-let hill_climbing = HillClimbing::new(10);
-strategy.with_local_search(hill_climbing);
-
 // Use with the evolution launcher
-let launcher = EvolutionLauncher::new(strategy, challenge);
-```
-
-#### Local Search Integration
-
-Improve solutions with local search algorithms:
-
-```rust
-use genalg::local_search::{LocalSearch, HillClimbing, SimulatedAnnealing};
-
-// Hill climbing
-let hill_climbing = HillClimbing::new(10);
-hill_climbing.search(&mut solution, &challenge);
-
-// Simulated annealing
-let simulated_annealing = SimulatedAnnealing::new(100, 1.0, 0.95);
-simulated_annealing.search(&mut solution, &challenge);
-
-// Combine multiple local search algorithms
-let mut hybrid = HybridLocalSearch::new();
-hybrid.add_algorithm(HillClimbing::new(5))
-      .add_algorithm(SimulatedAnnealing::new(10, 0.5, 0.9));
-hybrid.search(&mut solution, &challenge);
+let launcher = EvolutionLauncher::new(
+    strategy, 
+    selection_strategy, 
+    local_search_manager, // Optional
+    challenge
+);
 ```
 
 #### Fitness Caching
@@ -539,11 +661,11 @@ use genalg::caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};
 
 // Implement CacheKey for your phenotype
 impl CacheKey for MyPhenotype {
-    type Key = String;
+    type Key = i32;
     
     fn cache_key(&self) -> Self::Key {
         // Generate a unique key for this phenotype
-        format!("{}", self.value)
+        self.value as i32
     }
 }
 
@@ -554,7 +676,12 @@ let cached_challenge = CachedChallenge::new(challenge);
 let thread_local_cached_challenge = ThreadLocalCachedChallenge::new(challenge);
 
 // Use with the evolution launcher
-let launcher = EvolutionLauncher::new(strategy, cached_challenge);
+let launcher = EvolutionLauncher::new(
+    strategy, 
+    selection_strategy, 
+    local_search_manager, // Optional
+    cached_challenge
+);
 ```
 
 ### Parallel Processing
@@ -690,6 +817,12 @@ cargo bench
 # Run specific benchmark
 cargo bench --bench bench_parallel
 ```
+
+7. **Consider disabling local search** for performance-critical applications where solution quality can be traded for speed.
+
+8. **Use the appropriate local search application strategy** to balance solution quality and performance:
+   - `TopNStrategy` or `TopPercentStrategy` for applying local search selectively
+   - `ProbabilisticStrategy` for a randomized approach that can be tuned
 
 ## License
 
