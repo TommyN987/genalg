@@ -15,6 +15,9 @@
 //! - **Flexible**: Adaptable to a wide range of optimization problems
 //! - **Extensible**: Easy to implement custom phenotypes, fitness functions, and breeding strategies
 //! - **Parallel Processing**: Automatic parallelization for large populations using Rayon
+//! - **Local Search**: Integrated local search algorithms to refine solutions
+//! - **Constraint Handling**: Support for combinatorial optimization with constraint management
+//! - **Fitness Caching**: Efficient caching for expensive fitness evaluations
 //!
 //! ## Core Components
 //!
@@ -89,13 +92,16 @@
 //!
 //! ### Breeding Strategies
 //!
-//! GenAlg provides two built-in breeding strategies:
+//! GenAlg provides several built-in breeding strategies:
 //!
 //! 1. [`OrdinaryStrategy`]: A basic breeding strategy where the first parent is considered
 //!    the winner of the previous generation.
 //!
 //! 2. [`BoundedBreedStrategy`]: Similar to `OrdinaryStrategy` but imposes bounds on
 //!    phenotypes during evolution using the [`Magnitude`] trait.
+//!
+//! 3. [`CombinatorialBreedStrategy`]: Specialized for combinatorial optimization problems,
+//!    supporting constraint handling and penalty-based fitness adjustment.
 //!
 //! ### Selection Strategies
 //!
@@ -109,17 +115,52 @@
 //!
 //! 4. [`RankBasedSelection`]: Selects individuals based on their rank in the population.
 //!
+//! ### Local Search Algorithms
+//!
+//! GenAlg integrates local search algorithms to refine solutions during the evolutionary process:
+//!
+//! 1. [`HillClimbing`]: A simple hill climbing algorithm that iteratively moves to better neighboring solutions.
+//!
+//! 2. [`SimulatedAnnealing`]: A probabilistic algorithm that allows moves to worse solutions with decreasing probability.
+//!
+//! 3. [`TabuSearch`]: A metaheuristic that maintains a list of recently visited solutions to avoid cycling.
+//!
+//! 4. [`HybridLocalSearch`]: Combines multiple local search algorithms for more effective refinement.
+//!
+//! Local search can be applied to selected individuals using various strategies:
+//!
+//! 1. [`AllIndividualsStrategy`]: Applies local search to all individuals in the population.
+//!
+//! 2. [`TopNStrategy`]: Applies local search to the top N individuals based on fitness.
+//!
+//! 3. [`TopPercentStrategy`]: Applies local search to a percentage of the top individuals.
+//!
+//! 4. [`ProbabilisticStrategy`]: Applies local search to individuals with a certain probability.
+//!
+//! ### Constraint Handling
+//!
+//! For combinatorial optimization problems, GenAlg provides constraint handling capabilities:
+//!
+//! 1. [`Constraint`]: Trait for defining constraints on phenotypes.
+//!
+//! 2. [`ConstraintManager`]: Manages multiple constraints and provides methods for checking and repairing solutions.
+//!
+//! 3. [`PenaltyAdjustedChallenge`]: Wraps a challenge to adjust fitness scores based on constraint violations.
+//!
+//! 4. Built-in constraints for combinatorial problems like [`UniqueElementsConstraint`], [`CompleteAssignmentConstraint`], etc.
+//!
 //! ### Evolution Launcher
 //!
 //! The [`EvolutionLauncher`] manages the evolution process using a specified breeding
-//! strategy, selection strategy, and challenge:
+//! strategy, selection strategy, local search manager, and challenge. It now requires four parameters:
+//! a breeding strategy, a selection strategy, an optional local search manager, and a challenge.
 //!
 //! ```rust
 //! use genalg::{
 //!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
 //!     phenotype::Phenotype,
 //!     rng::RandomNumberGenerator,
-//!     strategy::ordinary::OrdinaryStrategy,
+//!     strategy::OrdinaryStrategy,
 //!     selection::ElitistSelection,
 //!     local_search::{HillClimbing, AllIndividualsStrategy},
 //! };
@@ -154,7 +195,8 @@
 //! let options = EvolutionOptions::default();
 //! let starting_value = MyPhenotype { value: 0.0 };
 //!
-//! // Create launcher with breeding and selection strategies
+//! // Create launcher with breeding, selection, and challenge
+//! // Note: The third parameter (local_search_manager) can be None if local search is not needed
 //! let launcher: EvolutionLauncher<
 //!     MyPhenotype,
 //!     OrdinaryStrategy,
@@ -162,13 +204,199 @@
 //!     HillClimbing,
 //!     MyChallenge,
 //!     AllIndividualsStrategy
-//! > = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
+//! > = EvolutionLauncher::new(
+//!     breed_strategy, 
+//!     selection_strategy, 
+//!     None, // No local search
+//!     challenge
+//! );
 //!
 //! // Configure and run the evolution
 //! let result = launcher
 //!     .configure(options, starting_value)
 //!     .with_seed(42)  // Optional: Set a specific seed
 //!     .run();
+//! ```
+//!
+//! If you want to use local search, you can create a local search manager and pass it to the launcher:
+//!
+//! ```rust
+//! # use genalg::{
+//! #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
+//! #     phenotype::Phenotype,
+//! #     rng::RandomNumberGenerator,
+//! #     strategy::OrdinaryStrategy,
+//! #     selection::ElitistSelection,
+//! #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
+//! # };
+//! # 
+//! # #[derive(Clone, Debug)]
+//! # struct MyPhenotype {
+//! #     value: f64,
+//! # }
+//! # 
+//! # impl Phenotype for MyPhenotype {
+//! #     fn crossover(&mut self, other: &Self) {}
+//! #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
+//! # }
+//! # 
+//! # #[derive(Clone)]
+//! # struct MyChallenge {
+//! #     target: f64,
+//! # }
+//! # 
+//! # impl Challenge<MyPhenotype> for MyChallenge {
+//! #     fn score(&self, phenotype: &MyPhenotype) -> f64 {
+//! #         1.0 / (phenotype.value - self.target).abs().max(0.001)
+//! #     }
+//! # }
+//! # 
+//! # let breed_strategy = OrdinaryStrategy::default();
+//! # let selection_strategy = ElitistSelection::default();
+//! # let challenge = MyChallenge { target: 42.0 };
+//! # let options = EvolutionOptions::default();
+//! # let starting_value = MyPhenotype { value: 0.0 };
+//! 
+//! // Create a local search manager
+//! let hill_climbing = HillClimbing::new(10).unwrap();
+//! let application_strategy = AllIndividualsStrategy::new();
+//! let local_search_manager = Some(
+//!     LocalSearchManager::new(hill_climbing, application_strategy)
+//! );
+//!
+//! // Create launcher with breeding, selection, local search, and challenge
+//! let launcher: EvolutionLauncher<
+//!     MyPhenotype,
+//!     OrdinaryStrategy,
+//!     ElitistSelection,
+//!     HillClimbing,
+//!     MyChallenge,
+//!     AllIndividualsStrategy
+//! > = EvolutionLauncher::new(
+//!     breed_strategy, 
+//!     selection_strategy, 
+//!     local_search_manager, 
+//!     challenge
+//! );
+//!
+//! // Configure and run the evolution with local search
+//! let result = launcher
+//!     .configure(options, starting_value)
+//!     .with_seed(42)
+//!     .with_local_search()  // Enable local search
+//!     .run();
+//! ```
+//!
+//! You can also use the builder pattern to create an `EvolutionLauncher`:
+//!
+//! ```rust
+//! # use genalg::{
+//! #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
+//! #     phenotype::Phenotype,
+//! #     rng::RandomNumberGenerator,
+//! #     strategy::OrdinaryStrategy,
+//! #     selection::ElitistSelection,
+//! #     local_search::{HillClimbing, AllIndividualsStrategy},
+//! #     error::Result,
+//! # };
+//! # 
+//! # #[derive(Clone, Debug)]
+//! # struct MyPhenotype {
+//! #     value: f64,
+//! # }
+//! # 
+//! # impl Phenotype for MyPhenotype {
+//! #     fn crossover(&mut self, other: &Self) {}
+//! #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
+//! # }
+//! # 
+//! # #[derive(Clone)]
+//! # struct MyChallenge {
+//! #     target: f64,
+//! # }
+//! # 
+//! # impl Challenge<MyPhenotype> for MyChallenge {
+//! #     fn score(&self, phenotype: &MyPhenotype) -> f64 {
+//! #         1.0 / (phenotype.value - self.target).abs().max(0.001)
+//! #     }
+//! # }
+//! 
+//! fn create_launcher() -> Result<EvolutionLauncher<
+//!     MyPhenotype,
+//!     OrdinaryStrategy,
+//!     ElitistSelection,
+//!     HillClimbing,
+//!     MyChallenge,
+//!     AllIndividualsStrategy
+//! >> {
+//!     let breed_strategy = OrdinaryStrategy::default();
+//!     let selection_strategy = ElitistSelection::default();
+//!     let challenge = MyChallenge { target: 42.0 };
+//!     
+//!     // Create a local search strategy and application strategy
+//!     let hill_climbing = HillClimbing::new(10)?;
+//!     let application_strategy = AllIndividualsStrategy::new();
+//!     
+//!     // Use the builder pattern
+//!     EvolutionLauncher::builder()
+//!         .with_breed_strategy(breed_strategy)
+//!         .with_selection_strategy(selection_strategy)
+//!         .with_local_search_manager(hill_climbing, application_strategy)
+//!         .with_challenge(challenge)
+//!         .build()
+//! }
+//! ```
+//!
+//! ### Fitness Caching
+//!
+//! For expensive fitness evaluations, GenAlg provides caching mechanisms:
+//!
+//! ```rust
+//! use genalg::{
+//!     caching::{CacheKey, CachedChallenge},
+//!     evolution::Challenge,
+//!     phenotype::Phenotype,
+//! };
+//!
+//! #[derive(Clone, Debug)]
+//! struct MyPhenotype {
+//!     value: f64,
+//! }
+//!
+//! // Implementation of Phenotype trait omitted for brevity
+//! # impl Phenotype for MyPhenotype {
+//! #     fn crossover(&mut self, other: &Self) {}
+//! #     fn mutate(&mut self, rng: &mut genalg::rng::RandomNumberGenerator) {}
+//! # }
+//!
+//! // Implement CacheKey to enable caching
+//! impl CacheKey for MyPhenotype {
+//!     // Use i32 as the key type since it implements Hash and Eq
+//!     type Key = i32;
+//!     
+//!     fn cache_key(&self) -> Self::Key {
+//!         // Convert the f64 value to an i32 for caching
+//!         // In a real implementation, you might want to use a more sophisticated
+//!         // conversion that preserves more precision
+//!         self.value as i32
+//!     }
+//! }
+//!
+//! #[derive(Clone)]
+//! struct MyChallenge {
+//!     target: f64,
+//! }
+//!
+//! impl Challenge<MyPhenotype> for MyChallenge {
+//!     fn score(&self, phenotype: &MyPhenotype) -> f64 {
+//!         // Expensive calculation
+//!         1.0 / (phenotype.value - self.target).abs().max(0.001)
+//!     }
+//! }
+//!
+//! // Create a cached version of the challenge
+//! let challenge = MyChallenge { target: 42.0 };
+//! let cached_challenge = CachedChallenge::new(challenge);
 //! ```
 //!
 //! ### Thread-Local Random Number Generation
@@ -222,6 +450,7 @@
 //! - Use `mutate_thread_local()` in your phenotype implementations
 //! - Set an appropriate parallel threshold based on your hardware
 //! - Consider using the `OrdinaryStrategy` for very large populations
+//! - Use fitness caching for expensive evaluations
 //!
 //! ## Error Handling
 //!
@@ -254,11 +483,15 @@
 //! - [`rng`]: Random number generation utilities
 //! - [`strategy`]: Breeding strategy implementations
 //! - [`selection`]: Selection strategy implementations
+//! - [`local_search`]: Local search algorithms and application strategies
+//! - [`constraints`]: Constraint handling for combinatorial optimization
+//! - [`caching`]: Fitness caching for expensive evaluations
 //!
 //! [`Phenotype`]: phenotype::Phenotype
 //! [`Challenge`]: evolution::Challenge
 //! [`OrdinaryStrategy`]: strategy::ordinary::OrdinaryStrategy
 //! [`BoundedBreedStrategy`]: strategy::bounded::BoundedBreedStrategy
+//! [`CombinatorialBreedStrategy`]: strategy::combinatorial::CombinatorialBreedStrategy
 //! [`Magnitude`]: strategy::bounded::Magnitude
 //! [`EvolutionLauncher`]: evolution::EvolutionLauncher
 //! [`EvolutionOptions`]: evolution::options::EvolutionOptions
@@ -267,6 +500,19 @@
 //! [`TournamentSelection`]: selection::TournamentSelection
 //! [`RouletteWheelSelection`]: selection::RouletteWheelSelection
 //! [`RankBasedSelection`]: selection::RankBasedSelection
+//! [`HillClimbing`]: local_search::HillClimbing
+//! [`SimulatedAnnealing`]: local_search::SimulatedAnnealing
+//! [`TabuSearch`]: local_search::TabuSearch
+//! [`HybridLocalSearch`]: local_search::HybridLocalSearch
+//! [`AllIndividualsStrategy`]: local_search::application::AllIndividualsStrategy
+//! [`TopNStrategy`]: local_search::application::TopNStrategy
+//! [`TopPercentStrategy`]: local_search::application::TopPercentStrategy
+//! [`ProbabilisticStrategy`]: local_search::application::ProbabilisticStrategy
+//! [`Constraint`]: constraints::Constraint
+//! [`ConstraintManager`]: constraints::ConstraintManager
+//! [`PenaltyAdjustedChallenge`]: constraints::PenaltyAdjustedChallenge
+//! [`UniqueElementsConstraint`]: constraints::combinatorial::UniqueElementsConstraint
+//! [`CompleteAssignmentConstraint`]: constraints::combinatorial::CompleteAssignmentConstraint
 
 pub mod caching;
 pub mod constraints;

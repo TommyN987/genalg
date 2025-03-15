@@ -26,6 +26,24 @@ pub struct EvolutionResult<Pheno: Phenotype> {
 }
 
 /// Manages the evolution process using a specified breeding strategy, selection strategy, and challenge.
+///
+/// The `EvolutionLauncher` is the central component of the genetic algorithm framework.
+/// It coordinates the entire evolutionary process, including:
+/// - Population initialization
+/// - Fitness evaluation
+/// - Parent selection
+/// - Breeding new individuals
+/// - Local search (optional)
+/// - Tracking the best solution
+///
+/// # Type Parameters
+///
+/// * `P` - The phenotype type that represents individuals in the population
+/// * `B` - The breeding strategy type
+/// * `S` - The selection strategy type
+/// * `LS` - The local search algorithm type
+/// * `F` - The challenge (fitness function) type
+/// * `A` - The local search application strategy type
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct EvolutionLauncher<P, B, S, LS, F, A>
 where
@@ -51,17 +69,63 @@ where
     B: BreedStrategy<P> + Clone + Send + Sync,
     S: SelectionStrategy<P> + Clone + Send + Sync,
 {
-    /// Creates a new `EvolutionLauncher` instance with the specified breeding strategy, selection strategy, and challenge.
+    /// Creates a new `EvolutionLauncher` instance with the specified breeding strategy, selection strategy, local search manager, and challenge.
     ///
     /// # Arguments
     ///
     /// * `breed_strategy` - The breeding strategy used for generating offspring during evolution.
     /// * `selection_strategy` - The selection strategy used for selecting parents for the next generation.
+    /// * `local_search_manager` - An optional local search manager for refining solutions. Use `None` if local search is not needed.
     /// * `challenge` - The challenge used to evaluate the fitness of phenotypes.
     ///
     /// # Returns
     ///
     /// A new `EvolutionLauncher` instance.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use genalg::{
+    /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
+    /// #     phenotype::Phenotype,
+    /// #     rng::RandomNumberGenerator,
+    /// #     strategy::OrdinaryStrategy,
+    /// #     selection::ElitistSelection,
+    /// #     local_search::{HillClimbing, AllIndividualsStrategy},
+    /// # };
+    /// # 
+    /// # #[derive(Clone, Debug)]
+    /// # struct MyPhenotype { value: f64 }
+    /// # impl Phenotype for MyPhenotype {
+    /// #     fn crossover(&mut self, other: &Self) {}
+    /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
+    /// # }
+    /// # 
+    /// # #[derive(Clone)]
+    /// # struct MyChallenge;
+    /// # impl Challenge<MyPhenotype> for MyChallenge {
+    /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
+    /// # }
+    /// 
+    /// let breed_strategy = OrdinaryStrategy::default();
+    /// let selection_strategy = ElitistSelection::default();
+    /// let challenge = MyChallenge;
+    /// 
+    /// // Create a launcher without local search
+    /// let launcher: EvolutionLauncher<
+    ///     MyPhenotype,
+    ///     OrdinaryStrategy,
+    ///     ElitistSelection,
+    ///     HillClimbing,
+    ///     MyChallenge,
+    ///     AllIndividualsStrategy
+    /// > = EvolutionLauncher::new(
+    ///     breed_strategy,
+    ///     selection_strategy,
+    ///     None, // No local search
+    ///     challenge
+    /// );
+    /// ```
     pub fn new(
         breed_strategy: B,
         selection_strategy: S,
@@ -76,6 +140,66 @@ where
         }
     }
 
+    /// Returns a builder for creating an `EvolutionLauncher` instance.
+    ///
+    /// The builder pattern provides a more flexible way to create an `EvolutionLauncher`
+    /// by allowing you to set components one at a time.
+    ///
+    /// # Returns
+    ///
+    /// A new `EvolutionLauncherBuilder` instance.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use genalg::{
+    /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
+    /// #     phenotype::Phenotype,
+    /// #     rng::RandomNumberGenerator,
+    /// #     strategy::OrdinaryStrategy,
+    /// #     selection::ElitistSelection,
+    /// #     local_search::{HillClimbing, AllIndividualsStrategy},
+    /// #     error::Result,
+    /// # };
+    /// # 
+    /// # #[derive(Clone, Debug)]
+    /// # struct MyPhenotype { value: f64 }
+    /// # impl Phenotype for MyPhenotype {
+    /// #     fn crossover(&mut self, other: &Self) {}
+    /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
+    /// # }
+    /// # 
+    /// # #[derive(Clone)]
+    /// # struct MyChallenge;
+    /// # impl Challenge<MyPhenotype> for MyChallenge {
+    /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
+    /// # }
+    /// 
+    /// fn create_launcher() -> Result<EvolutionLauncher<
+    ///     MyPhenotype,
+    ///     OrdinaryStrategy,
+    ///     ElitistSelection,
+    ///     HillClimbing,
+    ///     MyChallenge,
+    ///     AllIndividualsStrategy
+    /// >> {
+    ///     let breed_strategy = OrdinaryStrategy::default();
+    ///     let selection_strategy = ElitistSelection::default();
+    ///     let challenge = MyChallenge;
+    ///     
+    ///     // Create a local search strategy and application strategy
+    ///     let hill_climbing = HillClimbing::new(10)?;
+    ///     let application_strategy = AllIndividualsStrategy::new();
+    ///     
+    ///     // Use the builder pattern
+    ///     EvolutionLauncher::builder()
+    ///         .with_breed_strategy(breed_strategy)
+    ///         .with_selection_strategy(selection_strategy)
+    ///         .with_local_search_manager(hill_climbing, application_strategy)
+    ///         .with_challenge(challenge)
+    ///         .build()
+    /// }
+    /// ```
     pub fn builder() -> EvolutionLauncherBuilder<P, B, S, LS, F, A> {
         EvolutionLauncherBuilder::new()
     }
@@ -133,9 +257,17 @@ where
     ///     MyChallenge,
     ///     AllIndividualsStrategy
     /// > = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
+    /// 
+    /// // Basic configuration
     /// let result = launcher
+    ///     .configure(options.clone(), starting_value.clone())
+    ///     .run();
+    ///     
+    /// // With additional options
+    /// let result_with_options = launcher
     ///     .configure(options, starting_value)
-    ///     .with_seed(42)  // Optional: Set a specific seed
+    ///     .with_seed(42)  // Set a specific seed
+    ///     .with_local_search()  // Enable local search (if a manager was provided)
     ///     .run();
     /// ```
     pub fn configure(
@@ -160,13 +292,23 @@ where
     /// # Arguments
     ///
     /// * `options` - Evolution options controlling the evolution process.
-    /// * `starting_value` - The initial phenotype from which evolution begins.
     /// * `rng` - A random number generator for introducing randomness.
+    /// * `starting_value` - The initial phenotype from which evolution begins.
+    /// * `use_local_search` - Whether to apply local search during evolution.
     ///
     /// # Returns
     ///
     /// A `Result` containing the best-evolved phenotype and its associated score,
     /// or a `GeneticError` if evolution fails.
+    ///
+    /// # Process
+    ///
+    /// The evolution process follows these steps for each generation:
+    /// 1. Evaluate the fitness of all candidates
+    /// 2. Select parents for the next generation based on fitness
+    /// 3. Breed new candidates from the selected parents
+    /// 4. Apply local search to refine solutions (if enabled)
+    /// 5. Repeat until the maximum number of generations is reached
     fn evolve(
         &self,
         options: &EvolutionOptions,
@@ -273,6 +415,22 @@ where
         })
     }
 
+    /// Breeds new candidates using the breeding strategy.
+    ///
+    /// This internal method is called during the evolution process to generate
+    /// new candidates from the selected parents.
+    ///
+    /// # Arguments
+    ///
+    /// * `candidates` - The vector to store the newly bred candidates.
+    /// * `parents` - The selected parents for breeding.
+    /// * `options` - Evolution options controlling the breeding process.
+    /// * `rng` - A random number generator for introducing randomness.
+    /// * `generation` - The current generation number (for error reporting).
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or failure of the breeding process.
     fn breed(
         &self,
         candidates: &mut Vec<P>,
@@ -293,6 +451,18 @@ where
         }
     }
 
+    /// Evaluates the fitness of candidates in parallel.
+    ///
+    /// This method is used when the number of candidates exceeds the parallel threshold.
+    ///
+    /// # Arguments
+    ///
+    /// * `candidates` - The candidates to evaluate.
+    /// * `challenge` - The challenge used to evaluate fitness.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the evaluated candidates with their fitness scores.
     fn fitness_parallel(&self, candidates: &[P], challenge: &F) -> Result<Vec<EvolutionResult<P>>> {
         candidates
             .par_iter()
@@ -315,6 +485,18 @@ where
             .collect()
     }
 
+    /// Evaluates the fitness of candidates sequentially.
+    ///
+    /// This method is used when the number of candidates is below the parallel threshold.
+    ///
+    /// # Arguments
+    ///
+    /// * `candidates` - The candidates to evaluate.
+    /// * `challenge` - The challenge used to evaluate fitness.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the evaluated candidates with their fitness scores.
     fn fitness_sequential(
         &self,
         candidates: &[P],
@@ -373,6 +555,8 @@ where
 {
     /// Sets a specific seed for the random number generator.
     ///
+    /// Using a fixed seed ensures reproducible results across multiple runs.
+    ///
     /// # Arguments
     ///
     /// * `seed` - The seed value for the random number generator.
@@ -380,11 +564,122 @@ where
     /// # Returns
     ///
     /// The `EvolutionProcess` with the seed configured.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use genalg::{
+    /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
+    /// #     phenotype::Phenotype,
+    /// #     rng::RandomNumberGenerator,
+    /// #     strategy::OrdinaryStrategy,
+    /// #     selection::ElitistSelection,
+    /// #     local_search::{HillClimbing, AllIndividualsStrategy},
+    /// # };
+    /// # 
+    /// # #[derive(Clone, Debug)]
+    /// # struct MyPhenotype { value: f64 }
+    /// # impl Phenotype for MyPhenotype {
+    /// #     fn crossover(&mut self, other: &Self) {}
+    /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
+    /// # }
+    /// # 
+    /// # #[derive(Clone)]
+    /// # struct MyChallenge;
+    /// # impl Challenge<MyPhenotype> for MyChallenge {
+    /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
+    /// # }
+    /// # 
+    /// # let launcher: EvolutionLauncher<
+    /// #     MyPhenotype,
+    /// #     OrdinaryStrategy,
+    /// #     ElitistSelection,
+    /// #     HillClimbing,
+    /// #     MyChallenge,
+    /// #     AllIndividualsStrategy
+    /// # > = EvolutionLauncher::new(
+    /// #     OrdinaryStrategy::default(),
+    /// #     ElitistSelection::default(),
+    /// #     None,
+    /// #     MyChallenge
+    /// # );
+    /// # let options = EvolutionOptions::default();
+    /// # let starting_value = MyPhenotype { value: 0.0 };
+    /// 
+    /// // Configure evolution with a fixed seed for reproducibility
+    /// let result = launcher
+    ///     .configure(options, starting_value)
+    ///     .with_seed(42)
+    ///     .run();
+    /// ```
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
+    /// Enables local search during the evolution process.
+    ///
+    /// Local search can significantly improve the quality of solutions by refining
+    /// them after the breeding process. This method enables local search if a
+    /// local search manager was provided to the `EvolutionLauncher`.
+    ///
+    /// # Returns
+    ///
+    /// The `EvolutionProcess` with local search enabled.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use genalg::{
+    /// #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions},
+    /// #     phenotype::Phenotype,
+    /// #     rng::RandomNumberGenerator,
+    /// #     strategy::OrdinaryStrategy,
+    /// #     selection::ElitistSelection,
+    /// #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
+    /// # };
+    /// # 
+    /// # #[derive(Clone, Debug)]
+    /// # struct MyPhenotype { value: f64 }
+    /// # impl Phenotype for MyPhenotype {
+    /// #     fn crossover(&mut self, other: &Self) {}
+    /// #     fn mutate(&mut self, _rng: &mut RandomNumberGenerator) {}
+    /// # }
+    /// # 
+    /// # #[derive(Clone)]
+    /// # struct MyChallenge;
+    /// # impl Challenge<MyPhenotype> for MyChallenge {
+    /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
+    /// # }
+    /// # 
+    /// # let hill_climbing = HillClimbing::new(10).unwrap();
+    /// # let application_strategy = AllIndividualsStrategy::new();
+    /// # let local_search_manager = Some(
+    /// #     LocalSearchManager::new(hill_climbing, application_strategy)
+    /// # );
+    /// # 
+    /// # let launcher: EvolutionLauncher<
+    /// #     MyPhenotype,
+    /// #     OrdinaryStrategy,
+    /// #     ElitistSelection,
+    /// #     HillClimbing,
+    /// #     MyChallenge,
+    /// #     AllIndividualsStrategy
+    /// # > = EvolutionLauncher::new(
+    /// #     OrdinaryStrategy::default(),
+    /// #     ElitistSelection::default(),
+    /// #     local_search_manager,
+    /// #     MyChallenge
+    /// # );
+    /// # let options = EvolutionOptions::default();
+    /// # let starting_value = MyPhenotype { value: 0.0 };
+    /// 
+    /// // Configure evolution with local search enabled
+    /// let result = launcher
+    ///     .configure(options, starting_value)
+    ///     .with_local_search()
+    ///     .run();
+    /// ```
     pub fn with_local_search(mut self) -> Self {
         self.use_local_search = true;
         self
@@ -407,6 +702,7 @@ where
     /// - The number of offspring in options is zero
     /// - The breeding process fails
     /// - No viable candidates are produced in any generation
+    /// - Local search is enabled but no local search manager was provided
     ///
     /// # Performance
     ///

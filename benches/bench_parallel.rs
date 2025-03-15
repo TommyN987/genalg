@@ -2,6 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 
 use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
+    local_search::{HillClimbing, AllIndividualsStrategy},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
@@ -255,9 +256,17 @@ fn bench_evolution_strategies(c: &mut Criterion) {
         let selection_strategy = ElitistSelection::default();
 
         let ordinary_strategy = OrdinaryStrategy::default();
-        let ordinary_launcher = EvolutionLauncher::new(
+        let ordinary_launcher: EvolutionLauncher<
+            XCoordinate,
+            OrdinaryStrategy,
+            ElitistSelection,
+            HillClimbing,
+            XCoordinateChallenge,
+            AllIndividualsStrategy
+        > = EvolutionLauncher::new(
             ordinary_strategy,
             selection_strategy.clone(),
+            None,
             challenge.clone(),
         );
 
@@ -276,9 +285,17 @@ fn bench_evolution_strategies(c: &mut Criterion) {
         );
 
         let bounded_strategy = BoundedBreedStrategy::default();
-        let bounded_launcher = EvolutionLauncher::new(
+        let bounded_launcher: EvolutionLauncher<
+            XCoordinate,
+            BoundedBreedStrategy<XCoordinate>,
+            ElitistSelection,
+            HillClimbing,
+            XCoordinateChallenge,
+            AllIndividualsStrategy
+        > = EvolutionLauncher::new(
             bounded_strategy,
             selection_strategy.clone(),
+            None,
             challenge.clone(),
         );
 
