@@ -94,7 +94,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 
 use crate::evolution::Challenge;
@@ -254,8 +253,6 @@ where
     challenge: C,
     /// The cache of fitness evaluations
     cache: Arc<Mutex<HashMap<P::Key, f64>>>,
-    /// Phantom data for the phenotype type
-    _marker: PhantomData<P>,
 }
 
 impl<P, C> CachedChallenge<P, C>
@@ -310,7 +307,6 @@ where
         Self {
             challenge,
             cache: Arc::new(Mutex::new(HashMap::new())),
-            _marker: PhantomData,
         }
     }
 
@@ -372,7 +368,6 @@ where
         Self {
             challenge,
             cache: Arc::new(Mutex::new(cache)),
-            _marker: PhantomData,
         }
     }
 
@@ -1143,8 +1138,6 @@ where
     challenge: C,
     /// The thread-local cache of fitness evaluations
     cache: Arc<ThreadLocalCache<P>>,
-    /// Phantom data for the phenotype type
-    _marker: PhantomData<P>,
 }
 
 impl<P, C> ThreadLocalCachedChallenge<P, C>
@@ -1201,7 +1194,6 @@ where
         Self {
             challenge,
             cache: Arc::new(ThreadLocalCache::new()),
-            _marker: PhantomData,
         }
     }
 

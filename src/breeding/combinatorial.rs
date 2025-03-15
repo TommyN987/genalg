@@ -74,7 +74,7 @@ use crate::evolution::options::EvolutionOptions;
 use crate::evolution::Challenge;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
-use crate::strategy::BreedStrategy;
+use crate::breeding::BreedStrategy;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]

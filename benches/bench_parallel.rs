@@ -6,7 +6,7 @@ use genalg::{
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
-    strategy::{BoundedBreedStrategy, Magnitude, OrdinaryStrategy},
+    breeding::{BoundedBreedStrategy, Magnitude, OrdinaryStrategy},
 };
 use rayon::prelude::*;
 

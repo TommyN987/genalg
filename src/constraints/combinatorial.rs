@@ -31,7 +31,6 @@ where
     name: String,
     /// Function to extract the elements to check for uniqueness
     extractor: F,
-    /// Phantom data for the element type
     _marker: PhantomData<(P, T)>,
 }
 

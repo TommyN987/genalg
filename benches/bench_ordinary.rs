@@ -3,7 +3,7 @@ use genalg::{
     evolution::{EvolutionOptions, LogLevel},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
-    strategy::{BreedStrategy, OrdinaryStrategy},
+    breeding::{BreedStrategy, OrdinaryStrategy},
 };
 
 fn bench_ordinary(c: &mut Criterion) {

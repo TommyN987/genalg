@@ -5,7 +5,7 @@ use genalg::{
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
-    strategy::{BreedStrategy, OrdinaryStrategy},
+    breeding::{BreedStrategy, OrdinaryStrategy},
 };
 
 #[derive(Clone, Copy, Debug)]

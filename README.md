@@ -33,7 +33,7 @@ use genalg::{
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
-    strategy::OrdinaryStrategy,
+    breeding::OrdinaryStrategy,
     selection::ElitistSelection,
     local_search::{HillClimbing, AllIndividualsStrategy},
 };
@@ -418,7 +418,7 @@ Local search application strategies:
 For problems with constraints, use the `BoundedBreedStrategy` with the `Magnitude` trait:
 
 ```rust
-use genalg::strategy::{BoundedBreedStrategy, Magnitude};
+use  genalg::breeding::{BoundedBreedStrategy, Magnitude};
 
 impl Magnitude<MyPhenotype> for MyPhenotype {
     fn magnitude(&self) -> f64 {
@@ -453,7 +453,7 @@ use genalg::{
     evolution::options::EvolutionOptions,
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
-    strategy::BreedStrategy,
+    breeding::BreedStrategy,
 };
 
 #[derive(Debug, Clone)]
@@ -626,7 +626,7 @@ let repaired = constraint_manager.repair_all(&solution);
 Use the specialized breeding strategy for combinatorial problems:
 
 ```rust
-use genalg::strategy::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
+use  genalg::breeding::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
 use genalg::constraints::{Constraint, ConstraintManager};
 
 // Configure the breeding strategy
