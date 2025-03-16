@@ -1,9 +1,3 @@
-//! # Local Search Application Strategies
-//!
-//! This module provides strategies for determining which individuals in a population
-//! should undergo local search. These strategies help balance the computational cost
-//! of local search with its benefits by targeting promising solutions.
-
 use crate::error::{GeneticError, Result};
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
@@ -24,7 +18,6 @@ where
     ///
     /// * `population` - The current population of individuals.
     /// * `fitness` - The fitness scores corresponding to each individual in the population.
-    /// * `rng` - An optional random number generator for strategies that use randomness.
     ///
     /// # Returns
     ///
@@ -37,12 +30,7 @@ where
     /// - The fitness vector length doesn't match the population length
     /// - The selection process requires randomness but `rng` is `None`
     /// - The selection process encounters an error (e.g., random number generation fails)
-    fn select_for_local_search(
-        &self,
-        population: &[P],
-        fitness: &[f64],
-        rng: Option<&mut RandomNumberGenerator>,
-    ) -> Result<Vec<usize>>;
+    fn select_for_local_search(&self, population: &[P], fitness: &[f64]) -> Result<Vec<usize>>;
 }
 
 /// A strategy that applies local search to all individuals in the population.
@@ -50,7 +38,6 @@ where
 pub struct AllIndividualsStrategy;
 
 impl AllIndividualsStrategy {
-    /// Creates a new strategy that applies local search to all individuals.
     pub fn new() -> Self {
         Self
     }
@@ -66,13 +53,7 @@ impl<P> LocalSearchApplicationStrategy<P> for AllIndividualsStrategy
 where
     P: Phenotype,
 {
-    fn select_for_local_search(
-        &self,
-        population: &[P],
-        fitness: &[f64],
-        _rng: Option<&mut RandomNumberGenerator>,
-    ) -> Result<Vec<usize>> {
-        // Validate inputs
+    fn select_for_local_search(&self, population: &[P], fitness: &[f64]) -> Result<Vec<usize>> {
         if population.is_empty() {
             return Err(GeneticError::EmptyPopulation);
         }
@@ -84,7 +65,6 @@ where
             )));
         }
 
-        // Select all individuals
         Ok((0..population.len()).collect())
     }
 }
@@ -92,9 +72,7 @@ where
 /// A strategy that applies local search to the top N individuals by fitness.
 #[derive(Debug, Clone, Copy)]
 pub struct TopNStrategy {
-    /// The number of top individuals to select.
     n: usize,
-    /// Whether higher fitness is better (true) or lower fitness is better (false).
     higher_is_better: bool,
 }
 
@@ -137,13 +115,7 @@ impl<P> LocalSearchApplicationStrategy<P> for TopNStrategy
 where
     P: Phenotype,
 {
-    fn select_for_local_search(
-        &self,
-        population: &[P],
-        fitness: &[f64],
-        _rng: Option<&mut RandomNumberGenerator>,
-    ) -> Result<Vec<usize>> {
-        // Validate inputs
+    fn select_for_local_search(&self, population: &[P], fitness: &[f64]) -> Result<Vec<usize>> {
         if population.is_empty() {
             return Err(GeneticError::EmptyPopulation);
         }
@@ -158,11 +130,9 @@ where
         // Adjust n if it's larger than the population
         let n = self.n.min(population.len());
 
-        // Create indices and sort by fitness
         let mut indices: Vec<usize> = (0..population.len()).collect();
         indices.sort_by(|&a, &b| {
             let ordering = fitness[a].partial_cmp(&fitness[b]).unwrap_or_else(|| {
-                // Handle NaN values by placing them at the end
                 if fitness[a].is_nan() {
                     std::cmp::Ordering::Greater
                 } else if fitness[b].is_nan() {
@@ -173,13 +143,12 @@ where
             });
 
             if self.higher_is_better {
-                ordering.reverse() // Reverse for maximization
+                ordering.reverse()
             } else {
-                ordering // Keep as is for minimization
+                ordering
             }
         });
 
-        // Take the top n indices
         Ok(indices.into_iter().take(n).collect())
     }
 }
@@ -187,9 +156,7 @@ where
 /// A strategy that applies local search to a percentage of the top individuals by fitness.
 #[derive(Debug, Clone, Copy)]
 pub struct TopPercentStrategy {
-    /// The percentage of top individuals to select (0.0 to 1.0).
     percent: f64,
-    /// Whether higher fitness is better (true) or lower fitness is better (false).
     higher_is_better: bool,
 }
 
@@ -201,9 +168,9 @@ impl TopPercentStrategy {
     /// * `percent` - The percentage of top individuals to select (0.0 to 1.0).
     /// * `higher_is_better` - Whether higher fitness is better (true) or lower fitness is better (false).
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `percent` is not in the range [0.0, 1.0].
+    /// Returns an error if `percent` is not in the range [0.0, 1.0].
     pub fn new(percent: f64, higher_is_better: bool) -> Result<Self> {
         if !(0.0..=1.0).contains(&percent) {
             return Err(GeneticError::Configuration(
@@ -223,9 +190,9 @@ impl TopPercentStrategy {
     ///
     /// * `percent` - The percentage of top individuals to select (0.0 to 1.0).
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `percent` is not in the range [0.0, 1.0].
+    /// Returns an error if `percent` is not in the range [0.0, 1.0].
     pub fn new_maximizing(percent: f64) -> Result<Self> {
         Self::new(percent, true)
     }
@@ -237,9 +204,9 @@ impl TopPercentStrategy {
     ///
     /// * `percent` - The percentage of top individuals to select (0.0 to 1.0).
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `percent` is not in the range [0.0, 1.0].
+    /// Returns an error if `percent` is not in the range [0.0, 1.0].
     pub fn new_minimizing(percent: f64) -> Result<Self> {
         Self::new(percent, false)
     }
@@ -249,13 +216,7 @@ impl<P> LocalSearchApplicationStrategy<P> for TopPercentStrategy
 where
     P: Phenotype,
 {
-    fn select_for_local_search(
-        &self,
-        population: &[P],
-        fitness: &[f64],
-        _rng: Option<&mut RandomNumberGenerator>,
-    ) -> Result<Vec<usize>> {
-        // Validate inputs
+    fn select_for_local_search(&self, population: &[P], fitness: &[f64]) -> Result<Vec<usize>> {
         if population.is_empty() {
             return Err(GeneticError::EmptyPopulation);
         }
@@ -267,14 +228,11 @@ where
             )));
         }
 
-        // Calculate the number of individuals to select
         let n = (population.len() as f64 * self.percent).ceil() as usize;
 
-        // Create indices and sort by fitness
         let mut indices: Vec<usize> = (0..population.len()).collect();
         indices.sort_by(|&a, &b| {
             let ordering = fitness[a].partial_cmp(&fitness[b]).unwrap_or_else(|| {
-                // Handle NaN values by placing them at the end
                 if fitness[a].is_nan() {
                     std::cmp::Ordering::Greater
                 } else if fitness[b].is_nan() {
@@ -285,13 +243,12 @@ where
             });
 
             if self.higher_is_better {
-                ordering.reverse() // Reverse for maximization
+                ordering.reverse()
             } else {
-                ordering // Keep as is for minimization
+                ordering
             }
         });
 
-        // Take the top n indices
         Ok(indices.into_iter().take(n).collect())
     }
 }
@@ -310,9 +267,9 @@ impl ProbabilisticStrategy {
     ///
     /// * `probability` - The probability of applying local search to each individual (0.0 to 1.0).
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `probability` is not in the range [0.0, 1.0].
+    /// Returns an error if `probability` is not in the range [0.0, 1.0].
     pub fn new(probability: f64) -> Result<Self> {
         if !(0.0..=1.0).contains(&probability) {
             return Err(GeneticError::Configuration(
@@ -327,13 +284,7 @@ impl<P> LocalSearchApplicationStrategy<P> for ProbabilisticStrategy
 where
     P: Phenotype,
 {
-    fn select_for_local_search(
-        &self,
-        population: &[P],
-        fitness: &[f64],
-        rng: Option<&mut RandomNumberGenerator>,
-    ) -> Result<Vec<usize>> {
-        // Validate inputs
+    fn select_for_local_search(&self, population: &[P], fitness: &[f64]) -> Result<Vec<usize>> {
         if population.is_empty() {
             return Err(GeneticError::EmptyPopulation);
         }
@@ -345,17 +296,8 @@ where
             )));
         }
 
-        // Check if we have a random number generator
-        let rng = match rng {
-            Some(rng) => rng,
-            None => {
-                return Err(GeneticError::Configuration(
-                    "ProbabilisticStrategy requires a random number generator".to_string(),
-                ))
-            }
-        };
+        let mut rng = RandomNumberGenerator::new();
 
-        // Generate all random numbers at once for efficiency
         let random_values = rng.fetch_uniform(0.0, 1.0, population.len());
         if random_values.len() != population.len() {
             return Err(GeneticError::RandomGeneration(
@@ -364,7 +306,6 @@ where
             ));
         }
 
-        // Select individuals based on probability
         let mut selected = Vec::new();
         for (i, &random) in random_values.iter().enumerate() {
             if random < self.probability as f32 {
@@ -407,7 +348,7 @@ mod tests {
         let strategy = AllIndividualsStrategy::new();
 
         let result = strategy
-            .select_for_local_search(&population, &fitness, None)
+            .select_for_local_search(&population, &fitness)
             .unwrap();
         assert_eq!(result, vec![0, 1, 2]);
     }
@@ -423,7 +364,7 @@ mod tests {
         let strategy = TopNStrategy::new_maximizing(2);
 
         let result = strategy
-            .select_for_local_search(&population, &fitness, None)
+            .select_for_local_search(&population, &fitness)
             .unwrap();
         assert_eq!(result, vec![2, 1]); // Indices of highest fitness first
     }
@@ -439,7 +380,7 @@ mod tests {
         let strategy = TopNStrategy::new_minimizing(2);
 
         let result = strategy
-            .select_for_local_search(&population, &fitness, None)
+            .select_for_local_search(&population, &fitness)
             .unwrap();
         assert_eq!(result, vec![0, 1]); // Indices of lowest fitness first
     }
@@ -457,7 +398,7 @@ mod tests {
         let strategy = TopPercentStrategy::new_maximizing(0.4).unwrap(); // 40% = 2 individuals
 
         let result = strategy
-            .select_for_local_search(&population, &fitness, None)
+            .select_for_local_search(&population, &fitness)
             .unwrap();
         assert_eq!(result, vec![4, 3]); // Indices of highest fitness first
     }
@@ -471,10 +412,9 @@ mod tests {
         ];
         let fitness = vec![1.0, 2.0, 3.0];
         let strategy = ProbabilisticStrategy::new(1.0).unwrap(); // 100% probability
-        let mut rng = RandomNumberGenerator::from_seed(42);
 
         let result = strategy
-            .select_for_local_search(&population, &fitness, Some(&mut rng))
+            .select_for_local_search(&population, &fitness)
             .unwrap();
         assert_eq!(result.len(), 3); // All individuals selected with 100% probability
     }
@@ -485,7 +425,7 @@ mod tests {
         let fitness: Vec<f64> = vec![];
         let strategy = AllIndividualsStrategy::new();
 
-        let result = strategy.select_for_local_search(&population, &fitness, None);
+        let result = strategy.select_for_local_search(&population, &fitness);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), GeneticError::EmptyPopulation));
     }
@@ -496,21 +436,7 @@ mod tests {
         let fitness = vec![1.0, 2.0, 3.0]; // One more than population
         let strategy = AllIndividualsStrategy::new();
 
-        let result = strategy.select_for_local_search(&population, &fitness, None);
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            GeneticError::Configuration(_)
-        ));
-    }
-
-    #[test]
-    fn test_probabilistic_without_rng() {
-        let population = vec![TestPhenotype { value: 1.0 }, TestPhenotype { value: 2.0 }];
-        let fitness = vec![1.0, 2.0];
-        let strategy = ProbabilisticStrategy::new(0.5).unwrap();
-
-        let result = strategy.select_for_local_search(&population, &fitness, None);
+        let result = strategy.select_for_local_search(&population, &fitness);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
