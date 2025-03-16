@@ -7,16 +7,19 @@ use super::LocalSearch;
 
 /// A simple hill climbing algorithm.
 ///
-/// Hill climbing is a local search algorithm that iteratively moves to better
-/// neighboring solutions until no better solution can be found.
+/// Random Restart Hill climbing is a local search algorithm that iteratively moves to better
+/// neighboring solutions until no better solution can be found. The random restart is used to
+/// avoid local optima.
 #[derive(Debug, Clone)]
 pub struct HillClimbing {
     max_iterations: usize,
     max_neighbors: usize,
+    restart_probability: f64,
 }
 
 impl HillClimbing {
     /// Creates a new hill climbing algorithm with the given maximum number of iterations.
+    /// Restart probability is set to 0.05.
     ///
     /// # Arguments
     ///
@@ -46,7 +49,32 @@ impl HillClimbing {
         Ok(Self {
             max_iterations,
             max_neighbors,
+            restart_probability: 0.05,
         })
+    }
+
+    /// Overrides the default restart probability.
+    ///
+    /// # Arguments
+    ///
+    /// * `restart_probability` - The probability of restarting the search.
+    ///
+    /// # Returns
+    ///
+    /// A new hill climbing algorithm with the given restart probability.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the restart probability is not between 0.0 and 1.0.
+    pub fn with_restart_probability(mut self, restart_probability: f64) -> Result<Self> {
+        if restart_probability < 0.0 || restart_probability > 1.0 {
+            return Err(GeneticError::Configuration(
+                "Restart probability must be between 0.0 and 1.0".to_string(),
+            ));
+        }
+
+        self.restart_probability = restart_probability;
+        Ok(self)
     }
 }
 
@@ -57,34 +85,48 @@ where
 {
     fn search(&self, phenotype: &mut P, challenge: &C) -> bool {
         let initial_score = challenge.score(phenotype);
+        let mut current_solution = phenotype.clone();
         let mut current_score = initial_score;
         let mut improved = false;
         let mut rng = RandomNumberGenerator::new();
 
         for _ in 0..self.max_iterations {
-            let mut best_neighbor = phenotype.clone();
+            let mut best_neighbor = None;
             let mut best_neighbor_score = current_score;
-            let mut found_better = false;
 
             for _ in 0..self.max_neighbors {
-                let mut neighbor = phenotype.clone();
+                let mut neighbor = current_solution.clone();
                 neighbor.mutate(&mut rng);
                 let neighbor_score = challenge.score(&neighbor);
 
                 if neighbor_score > best_neighbor_score {
-                    best_neighbor = neighbor;
+                    best_neighbor = Some(neighbor);
                     best_neighbor_score = neighbor_score;
-                    found_better = true;
                 }
             }
 
-            if found_better {
-                *phenotype = best_neighbor;
+            if let Some(best) = best_neighbor {
+                current_solution = best;
                 current_score = best_neighbor_score;
                 improved = true;
             } else {
-                break;
+                let should_restart: f64 = match rng.fetch_uniform(0.0, 1.0, 1).front() {
+                    Some(value) => *value as f64,
+                    None => {
+                        return false;
+                    }
+                };
+                if should_restart < self.restart_probability {
+                    current_solution.mutate(&mut rng);
+                    current_score = challenge.score(&current_solution);
+                } else {
+                    break;
+                }
             }
+        }
+
+        if improved {
+            *phenotype = current_solution;
         }
 
         improved
