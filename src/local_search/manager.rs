@@ -91,7 +91,7 @@ where
         // Select individuals for local search
         let indices = self
             .application_strategy
-            .select_for_local_search(population, fitness, None)?;
+            .select_for_local_search(population, fitness)?;
 
         // Initialize the improvements vector
         let mut improvements = vec![false; population.len()];

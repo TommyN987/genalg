@@ -304,7 +304,7 @@ use genalg::{
 };
 
 // Create a local search algorithm
-let hill_climbing = HillClimbing::new(10).unwrap(); // 10 iterations max
+let hill_climbing = HillClimbing::new(10, 10).unwrap(); // 10 iterations max, 10 neighbors to evaluate
 
 // Create a local search application strategy
 let application_strategy = AllIndividualsStrategy::new();
@@ -333,16 +333,13 @@ let result = launcher
 
 Available local search algorithms:
 
-1. **HillClimbing**: A simple hill climbing algorithm that iteratively makes small improvements.
+1. **HillClimbing**: A random restart hill climbing algorithm that iteratively makes small improvements.
 
    ```rust
    use genalg::local_search::HillClimbing;
    
    // Basic hill climbing with default neighbors
-   let hill_climbing = HillClimbing::new(10).unwrap();
-   
-   // With custom number of neighbors to evaluate
-   let hill_climbing = HillClimbing::with_neighbors(10, 5).unwrap();
+   let hill_climbing = HillClimbing::new(10, 10).unwrap();
    ```
 
 2. **SimulatedAnnealing**: Allows accepting worse solutions with decreasing probability over time.
@@ -369,7 +366,7 @@ Available local search algorithms:
    use genalg::local_search::{HybridLocalSearch, HillClimbing, SimulatedAnnealing};
    
    let mut hybrid = HybridLocalSearch::new();
-   hybrid.add_algorithm(HillClimbing::new(5).unwrap())
+   hybrid.add_algorithm(HillClimbing::new(5, 10).unwrap())
          .add_algorithm(SimulatedAnnealing::new(10, 0.5, 0.9).unwrap());
    ```
 
