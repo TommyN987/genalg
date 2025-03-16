@@ -6,7 +6,7 @@
 
 use crate::error::{GeneticError, Result};
 use crate::evolution::Challenge;
-use crate::local_search::application::LocalSearchApplicationStrategy;
+use crate::local_search::application_stategy::LocalSearchApplicationStrategy;
 use crate::local_search::LocalSearch;
 use crate::phenotype::Phenotype;
 use std::marker::PhantomData;
@@ -28,7 +28,6 @@ where
     algorithm: L,
     /// The strategy for selecting individuals to apply local search to.
     application_strategy: A,
-    /// Phantom data for the phenotype and challenge types.
     _marker: PhantomData<(P, C)>,
 }
 
@@ -119,7 +118,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::local_search::application::{AllIndividualsStrategy, TopNStrategy};
+    use crate::local_search::application_stategy::{AllIndividualsStrategy, TopNStrategy};
     use crate::local_search::HillClimbing;
     use crate::rng::RandomNumberGenerator;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -176,7 +175,7 @@ mod tests {
         ];
         let fitness = vec![-1.0, -2.0, -3.0]; // Distance from target=0
         let challenge = TestChallenge::new(0.0);
-        let hill_climbing = HillClimbing::new(10).unwrap();
+        let hill_climbing = HillClimbing::new(10, 10).unwrap();
         let all_strategy = AllIndividualsStrategy::new();
         let manager = LocalSearchManager::new(hill_climbing, all_strategy);
 
@@ -200,7 +199,7 @@ mod tests {
         ];
         let fitness = vec![-1.0, -2.0, -3.0]; // Distance from target=0, lower is better
         let challenge = TestChallenge::new(0.0);
-        let hill_climbing = HillClimbing::new(10).unwrap();
+        let hill_climbing = HillClimbing::new(10, 10).unwrap();
         let top_strategy = TopNStrategy::new_minimizing(1); // Only the best individual
         let manager = LocalSearchManager::new(hill_climbing, top_strategy);
 
@@ -220,7 +219,7 @@ mod tests {
         let mut population: Vec<TestPhenotype> = vec![];
         let fitness: Vec<f64> = vec![];
         let challenge = TestChallenge::new(0.0);
-        let hill_climbing = HillClimbing::new(10).unwrap();
+        let hill_climbing = HillClimbing::new(10, 10).unwrap();
         let all_strategy = AllIndividualsStrategy::new();
         let manager = LocalSearchManager::new(hill_climbing, all_strategy);
 
@@ -235,7 +234,7 @@ mod tests {
         let mut population = vec![TestPhenotype { value: 1.0 }, TestPhenotype { value: 2.0 }];
         let fitness = vec![-1.0, -2.0, -3.0]; // One more than population
         let challenge = TestChallenge::new(0.0);
-        let hill_climbing = HillClimbing::new(10).unwrap();
+        let hill_climbing = HillClimbing::new(10, 10).unwrap();
         let all_strategy = AllIndividualsStrategy::new();
         let manager = LocalSearchManager::new(hill_climbing, all_strategy);
 

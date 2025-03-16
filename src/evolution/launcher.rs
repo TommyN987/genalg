@@ -7,12 +7,12 @@ use super::{
     options::{EvolutionOptions, LogLevel},
 };
 use crate::{
+    breeding::BreedStrategy,
     error::{GeneticError, Result},
     local_search::{LocalSearchApplicationStrategy, LocalSearchManager},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::SelectionStrategy,
-    breeding::BreedStrategy,
     LocalSearch, OptionExt,
 };
 
@@ -188,7 +188,7 @@ where
     ///     let challenge = MyChallenge;
     ///     
     ///     // Create a local search strategy and application strategy
-    ///     let hill_climbing = HillClimbing::new(10)?;
+    ///     let hill_climbing = HillClimbing::new(10, 10)?;
     ///     let application_strategy = AllIndividualsStrategy::new();
     ///     
     ///     // Use the builder pattern
@@ -652,7 +652,7 @@ where
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
     /// #
-    /// # let hill_climbing = HillClimbing::new(10).unwrap();
+    /// # let hill_climbing = HillClimbing::new(10, 10).unwrap();
     /// # let application_strategy = AllIndividualsStrategy::new();
     /// # let local_search_manager = Some(
     /// #     LocalSearchManager::new(hill_climbing, application_strategy)

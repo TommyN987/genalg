@@ -258,7 +258,7 @@
 //! # let starting_value = MyPhenotype { value: 0.0 };
 //!
 //! // Create a local search manager
-//! let hill_climbing = HillClimbing::new(10).unwrap();
+//! let hill_climbing = HillClimbing::new(10, 10).unwrap();
 //! let application_strategy = AllIndividualsStrategy::new();
 //! let local_search_manager = Some(
 //!     LocalSearchManager::new(hill_climbing, application_strategy)
@@ -334,7 +334,7 @@
 //!     let challenge = MyChallenge { target: 42.0 };
 //!     
 //!     // Create a local search strategy and application strategy
-//!     let hill_climbing = HillClimbing::new(10)?;
+//!     let hill_climbing = HillClimbing::new(10, 10)?;
 //!     let application_strategy = AllIndividualsStrategy::new();
 //!     
 //!     // Use the builder pattern
@@ -514,6 +514,7 @@
 //! [`UniqueElementsConstraint`]: constraints::combinatorial::UniqueElementsConstraint
 //! [`CompleteAssignmentConstraint`]: constraints::combinatorial::CompleteAssignmentConstraint
 
+pub mod breeding;
 pub mod caching;
 pub mod constraints;
 pub mod error;
@@ -522,9 +523,14 @@ pub mod local_search;
 pub mod phenotype;
 pub mod rng;
 pub mod selection;
-pub mod breeding;
 
 // Re-export commonly used types for convenience
+pub use breeding::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy};
+pub use breeding::{
+    bounded::{BoundedBreedConfig, BoundedBreedStrategy, Magnitude},
+    ordinary::OrdinaryStrategy,
+    BreedStrategy,
+};
 pub use caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};
 pub use constraints::{Constraint, ConstraintManager, ConstraintViolation};
 pub use error::{GeneticError, OptionExt, Result, ResultExt};
@@ -535,10 +541,4 @@ pub use rng::ThreadLocalRng;
 pub use selection::{
     ElitistSelection, RankBasedSelection, RouletteWheelSelection, SelectionStrategy,
     TournamentSelection,
-};
-pub use breeding::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy};
-pub use breeding::{
-    bounded::{BoundedBreedConfig, BoundedBreedStrategy, Magnitude},
-    ordinary::OrdinaryStrategy,
-    BreedStrategy,
 };
