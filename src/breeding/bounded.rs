@@ -14,12 +14,12 @@ use rayon::prelude::*;
 use tracing::{debug, info};
 
 use crate::{
+    breeding::BreedStrategy,
     error::{GeneticError, Result},
     evolution::options::EvolutionOptions,
     evolution::options::LogLevel,
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
-    breeding::BreedStrategy,
 };
 
 /// Trait for phenotypes that have a measurable magnitude with defined bounds.

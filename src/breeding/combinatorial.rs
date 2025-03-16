@@ -68,13 +68,13 @@
 //!
 //! 4. Use penalties during fitness evaluation with `create_penalty_challenge`
 
+use crate::breeding::BreedStrategy;
 use crate::constraints::{ConstraintManager, PenaltyAdjustedChallenge};
 use crate::error::{GeneticError, Result};
 use crate::evolution::options::EvolutionOptions;
 use crate::evolution::Challenge;
 use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
-use crate::breeding::BreedStrategy;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]

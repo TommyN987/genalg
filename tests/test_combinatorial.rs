@@ -1,4 +1,5 @@
 use genalg::{
+    breeding::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy},
     caching::{CacheKey, CachedChallenge},
     constraints::{Constraint, ConstraintViolation},
     error::{GeneticError, Result},
@@ -7,7 +8,6 @@ use genalg::{
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
-    breeding::combinatorial::{CombinatorialBreedConfig, CombinatorialBreedStrategy},
 };
 
 // Define a phenotype for the test

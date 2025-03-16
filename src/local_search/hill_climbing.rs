@@ -67,7 +67,7 @@ impl HillClimbing {
     ///
     /// Returns an error if the restart probability is not between 0.0 and 1.0.
     pub fn with_restart_probability(mut self, restart_probability: f64) -> Result<Self> {
-        if restart_probability < 0.0 || restart_probability > 1.0 {
+        if !(0.0..=1.0).contains(&restart_probability) {
             return Err(GeneticError::Configuration(
                 "Restart probability must be between 0.0 and 1.0".to_string(),
             ));
