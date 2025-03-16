@@ -173,8 +173,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        evolution::options::EvolutionOptions, phenotype::Phenotype, rng::RandomNumberGenerator,
-        breeding::BreedStrategy,
+        breeding::BreedStrategy, evolution::options::EvolutionOptions, phenotype::Phenotype,
+        rng::RandomNumberGenerator,
     };
 
     #[allow(unused)]

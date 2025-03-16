@@ -1,9 +1,9 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use genalg::{
+    breeding::{BreedStrategy, OrdinaryStrategy},
     evolution::{EvolutionOptions, LogLevel},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
-    breeding::{BreedStrategy, OrdinaryStrategy},
 };
 
 fn bench_ordinary(c: &mut Criterion) {

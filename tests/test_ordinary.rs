@@ -1,11 +1,11 @@
 use genalg::{
+    breeding::{BreedStrategy, OrdinaryStrategy},
     error::GeneticError,
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
     local_search::{AllIndividualsStrategy, HillClimbing},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
-    breeding::{BreedStrategy, OrdinaryStrategy},
 };
 
 #[derive(Clone, Copy, Debug)]

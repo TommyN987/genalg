@@ -1,12 +1,12 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use genalg::{
+    breeding::{BoundedBreedStrategy, Magnitude, OrdinaryStrategy},
     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
     local_search::{AllIndividualsStrategy, HillClimbing},
     phenotype::Phenotype,
     rng::RandomNumberGenerator,
     selection::ElitistSelection,
-    breeding::{BoundedBreedStrategy, Magnitude, OrdinaryStrategy},
 };
 use rayon::prelude::*;
 

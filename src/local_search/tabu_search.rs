@@ -101,11 +101,9 @@ where
                 let is_better_than_best = neighbor_score > best_score;
                 let is_not_tabu = !tabu_list.contains(&neighbor);
 
-                if is_better_than_best || is_not_tabu {
-                    if neighbor_score > best_neighbor_score {
-                        best_neighbor = Some(neighbor);
-                        best_neighbor_score = neighbor_score;
-                    }
+                if (is_better_than_best || is_not_tabu) && neighbor_score > best_neighbor_score {
+                    best_neighbor = Some(neighbor);
+                    best_neighbor_score = neighbor_score;
                 }
             }
 
