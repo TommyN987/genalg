@@ -242,7 +242,7 @@ where
     ///     MyChallenge,
     ///     AllIndividualsStrategy
     /// >> {
-    ///     let hill_climbing = HillClimbing::new(10)?;
+    ///     let hill_climbing = HillClimbing::new(10, 10)?;
     ///     let application_strategy = AllIndividualsStrategy::new();
     ///     
     ///     EvolutionLauncher::builder()
