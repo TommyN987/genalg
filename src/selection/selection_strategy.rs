@@ -2,7 +2,6 @@ use std::fmt::Debug;
 
 use crate::error::Result;
 use crate::phenotype::Phenotype;
-use crate::rng::RandomNumberGenerator;
 
 /// Trait for selection strategies in genetic algorithms.
 ///
@@ -42,10 +41,10 @@ use crate::rng::RandomNumberGenerator;
 ///     ];
 ///     
 ///     let fitness = vec![0.5, 0.8, 0.3];
-///     let mut rng = RandomNumberGenerator::new();
 ///     
-///     let selection = ElitistSelection::new();
-///     let selected = selection.select(&population, &fitness, 2, Some(&mut rng))?;
+///     // Create an elitist selection with default parameters (higher is better, no duplicates)
+///     let selection = ElitistSelection::new(true, false);
+///     let selected = selection.select(&population, &fitness, 2)?;
 ///     
 ///     assert_eq!(selected.len(), 2);
 ///     
@@ -63,8 +62,6 @@ where
     /// * `population` - The current population of individuals.
     /// * `fitness` - The fitness scores corresponding to each individual in the population.
     /// * `num_to_select` - The number of individuals to select.
-    /// * `rng` - An optional random number generator for selection strategies that use randomness.
-    ///           If a strategy requires randomness but `rng` is `None`, an error will be returned.
     ///
     /// # Returns
     ///
@@ -75,13 +72,6 @@ where
     /// Returns an error if:
     /// - The population is empty
     /// - The fitness vector length doesn't match the population length
-    /// - The selection process requires randomness but `rng` is `None`
     /// - The selection process encounters an error (e.g., random number generation fails)
-    fn select(
-        &self,
-        population: &[P],
-        fitness: &[f64],
-        num_to_select: usize,
-        rng: Option<&mut RandomNumberGenerator>,
-    ) -> Result<Vec<P>>;
+    fn select(&self, population: &[P], fitness: &[f64], num_to_select: usize) -> Result<Vec<P>>;
 }

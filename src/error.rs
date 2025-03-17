@@ -206,6 +206,10 @@ pub enum GeneticError {
     #[error("Fitness calculation error: {0}")]
     FitnessCalculation(String),
 
+    /// Error that occurs when a selection operation fails.
+    #[error("Selection error: {0}")]
+    Selection(String),
+
     /// Error that occurs when a random number generation fails.
     #[error("Random generation error: {0}")]
     RandomGeneration(String),
