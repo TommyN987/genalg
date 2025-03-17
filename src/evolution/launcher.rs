@@ -368,7 +368,6 @@ where
                 &population,
                 &scores,
                 options.get_population_size(),
-                Some(rng),
             )?;
 
             // 3. Breeding

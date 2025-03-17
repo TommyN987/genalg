@@ -2,7 +2,6 @@ use std::cmp::Ordering;
 
 use crate::error::{GeneticError, Result};
 use crate::phenotype::Phenotype;
-use crate::rng::RandomNumberGenerator;
 use crate::selection::selection_strategy::SelectionStrategy;
 
 /// A selection strategy that selects the best individuals based on fitness.
@@ -45,16 +44,16 @@ use crate::selection::selection_strategy::SelectionStrategy;
 ///     let fitness = vec![0.5, 0.8, 0.3];
 ///     
 ///     // By default, higher fitness is better
-///     let selection = ElitistSelection::new();
-///     let selected = selection.select(&population, &fitness, 2, None)?;
+///     let selection = ElitistSelection::default();
+///     let selected = selection.select(&population, &fitness, 2)?;
 ///     
 ///     assert_eq!(selected.len(), 2);
 ///     assert_eq!(selected[0].value, 2.0); // Highest fitness (0.8)
 ///     assert_eq!(selected[1].value, 1.0); // Second highest fitness (0.5)
 ///     
 ///     // For minimization problems, lower fitness is better
-///     let selection = ElitistSelection::with_options(false, false);
-///     let selected = selection.select(&population, &fitness, 2, None)?;
+///     let selection = ElitistSelection::new(false, false);
+///     let selected = selection.select(&population, &fitness, 2)?;
 ///     
 ///     assert_eq!(selected.len(), 2);
 ///     assert_eq!(selected[0].value, 3.0); // Lowest fitness (0.3)
@@ -72,46 +71,40 @@ pub struct ElitistSelection {
 }
 
 impl ElitistSelection {
-    /// Creates a new ElitistSelection strategy.
-    ///
-    /// By default, duplicates are not allowed in the selected individuals,
-    /// and higher fitness is considered better.
-    pub fn new() -> Self {
-        Self {
-            allow_duplicates: false,
-            higher_is_better: true,
-        }
-    }
-
-    /// Creates a new ElitistSelection strategy with the specified duplicate policy.
-    ///
-    /// # Arguments
-    ///
-    /// * `allow_duplicates` - Whether to allow duplicates in the selected individuals.
-    pub fn with_duplicates(allow_duplicates: bool) -> Self {
-        Self {
-            allow_duplicates,
-            higher_is_better: true,
-        }
-    }
-
     /// Creates a new ElitistSelection strategy with the specified options.
     ///
     /// # Arguments
     ///
     /// * `higher_is_better` - Whether higher fitness is better (true) or lower fitness is better (false).
     /// * `allow_duplicates` - Whether to allow duplicates in the selected individuals.
-    pub fn with_options(higher_is_better: bool, allow_duplicates: bool) -> Self {
+    pub fn new(higher_is_better: bool, allow_duplicates: bool) -> Self {
         Self {
             allow_duplicates,
             higher_is_better,
         }
     }
+
+    pub fn with_duplicates(mut self) -> Self {
+        self.allow_duplicates = true;
+        self
+    }
+
+    pub fn with_lower_is_better(mut self) -> Self {
+        self.higher_is_better = false;
+        self
+    }
 }
 
 impl Default for ElitistSelection {
+    /// Creates a new ElitistSelection strategy.
+    ///
+    /// By default, duplicates are not allowed in the selected individuals,
+    /// and higher fitness is considered better.
     fn default() -> Self {
-        Self::new()
+        Self {
+            allow_duplicates: false,
+            higher_is_better: true,
+        }
     }
 }
 
@@ -119,13 +112,7 @@ impl<P> SelectionStrategy<P> for ElitistSelection
 where
     P: Phenotype,
 {
-    fn select(
-        &self,
-        population: &[P],
-        fitness: &[f64],
-        num_to_select: usize,
-        _rng: Option<&mut RandomNumberGenerator>,
-    ) -> Result<Vec<P>> {
+    fn select(&self, population: &[P], fitness: &[f64], num_to_select: usize) -> Result<Vec<P>> {
         if population.is_empty() {
             return Err(GeneticError::EmptyPopulation);
         }
@@ -138,17 +125,14 @@ where
             )));
         }
 
-        // Create (index, fitness) pairs
         let mut indexed_fitness: Vec<(usize, f64)> = fitness
             .iter()
             .enumerate()
             .map(|(idx, &score)| (idx, score))
             .collect();
 
-        // Sort by fitness (descending or ascending based on higher_is_better)
         indexed_fitness.sort_by(|a, b| {
             let cmp = a.1.partial_cmp(&b.1).unwrap_or_else(|| {
-                // Handle NaN values by considering them less than any other value
                 if a.1.is_nan() {
                     Ordering::Less
                 } else if b.1.is_nan() {
@@ -158,7 +142,6 @@ where
                 }
             });
 
-            // Reverse the ordering if higher is better
             if self.higher_is_better {
                 cmp.reverse()
             } else {
@@ -166,13 +149,11 @@ where
             }
         });
 
-        // Select the top individuals
         let mut selected = Vec::with_capacity(num_to_select);
         let mut selected_indices = std::collections::HashSet::new();
 
         for (idx, _) in indexed_fitness.iter() {
             if !self.allow_duplicates && !selected_indices.insert(*idx) {
-                // Skip duplicates if not allowed
                 continue;
             }
 
@@ -231,8 +212,8 @@ mod tests {
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
 
         // Test with default parameters (higher is better)
-        let selection = ElitistSelection::new();
-        let selected = selection.select(&population, &fitness, 3, None).unwrap();
+        let selection = ElitistSelection::default();
+        let selected = selection.select(&population, &fitness, 3).unwrap();
 
         // Should select individuals with highest fitness
         assert_eq!(selected.len(), 3);
@@ -256,8 +237,8 @@ mod tests {
         let fitness = vec![0.5, 0.8, 0.3, 0.9, 0.1];
 
         // Test with lower is better
-        let selection = ElitistSelection::with_options(false, false);
-        let selected = selection.select(&population, &fitness, 3, None).unwrap();
+        let selection = ElitistSelection::new(false, false);
+        let selected = selection.select(&population, &fitness, 3).unwrap();
 
         // Should select individuals with lowest fitness
         assert_eq!(selected.len(), 3);
@@ -277,18 +258,22 @@ mod tests {
 
         let fitness = vec![0.5, 0.8, 0.3];
 
-        // Test with duplicates allowed
-        let selection = ElitistSelection::with_duplicates(true);
-        let selected = selection.select(&population, &fitness, 5, None).unwrap();
+        // Test with duplicates allowed and lower_is_better=false
+        // This means that lower fitness values are considered better
+        let selection = ElitistSelection::new(false, true);
+        let selected = selection.select(&population, &fitness, 5).unwrap();
 
         // Should select 5 individuals, with duplicates
         assert_eq!(selected.len(), 5);
-        // The first 3 should be the original population in order of fitness
-        assert!((selected[0].value - 2.0).abs() < f64::EPSILON); // index 1, fitness 0.8
+
+        // For lower_is_better=false, lower fitness values are better
+        // So the order should be: index 2 (fitness 0.3), index 0 (fitness 0.5), index 1 (fitness 0.8)
+        assert!((selected[0].value - 3.0).abs() < f64::EPSILON); // index 2, fitness 0.3
         assert!((selected[1].value - 1.0).abs() < f64::EPSILON); // index 0, fitness 0.5
-        assert!((selected[2].value - 3.0).abs() < f64::EPSILON); // index 2, fitness 0.3
-                                                                 // The remaining 2 should be duplicates of the best individuals
-        assert!((selected[3].value - 2.0).abs() < f64::EPSILON); // duplicate of index 1
+        assert!((selected[2].value - 2.0).abs() < f64::EPSILON); // index 1, fitness 0.8
+
+        // The remaining 2 should be duplicates of the best individuals
+        assert!((selected[3].value - 3.0).abs() < f64::EPSILON); // duplicate of index 2
         assert!((selected[4].value - 1.0).abs() < f64::EPSILON); // duplicate of index 0
     }
 
@@ -303,8 +288,8 @@ mod tests {
         let fitness = vec![0.5, 0.8, 0.3];
 
         // Test without duplicates
-        let selection = ElitistSelection::with_duplicates(false);
-        let selected = selection.select(&population, &fitness, 5, None).unwrap();
+        let selection = ElitistSelection::new(true, false);
+        let selected = selection.select(&population, &fitness, 5).unwrap();
 
         // Should only select 3 individuals (no duplicates)
         assert_eq!(selected.len(), 3);
@@ -319,8 +304,8 @@ mod tests {
         let population: Vec<TestPhenotype> = Vec::new();
         let fitness: Vec<f64> = Vec::new();
 
-        let selection = ElitistSelection::new();
-        let result = selection.select(&population, &fitness, 3, None);
+        let selection = ElitistSelection::default();
+        let result = selection.select(&population, &fitness, 3);
 
         assert!(result.is_err());
     }
@@ -331,8 +316,8 @@ mod tests {
 
         let fitness = vec![0.5];
 
-        let selection = ElitistSelection::new();
-        let result = selection.select(&population, &fitness, 1, None);
+        let selection = ElitistSelection::default();
+        let result = selection.select(&population, &fitness, 1);
 
         assert!(result.is_err());
     }
@@ -348,8 +333,8 @@ mod tests {
         let fitness = vec![0.5, f64::NAN, 0.3];
 
         // Test with NaN values
-        let selection = ElitistSelection::new();
-        let selected = selection.select(&population, &fitness, 3, None).unwrap();
+        let selection = ElitistSelection::default();
+        let selected = selection.select(&population, &fitness, 3).unwrap();
 
         // NaN values should be sorted last
         assert_eq!(selected.len(), 3);
