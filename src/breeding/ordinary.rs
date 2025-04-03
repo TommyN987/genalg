@@ -194,7 +194,7 @@ mod tests {
 
         let mut parents = Vec::<MockPhenotype>::new();
 
-        parents.extend((0..5).into_iter().map(|_| MockPhenotype));
+        parents.extend((0..5).map(|_| MockPhenotype));
 
         let children = strategy.breed(&parents, &evol_options, &mut rng).unwrap();
 

@@ -951,15 +951,9 @@ mod tests {
     }
 
     // Test challenge for PenaltyAdjustedChallenge tests
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Default)]
     struct PenaltyTestChallenge {
         target: usize,
-    }
-
-    impl Default for PenaltyTestChallenge {
-        fn default() -> Self {
-            Self { target: 0 }
-        }
     }
 
     impl Challenge<PenaltyTestPhenotype> for PenaltyTestChallenge {

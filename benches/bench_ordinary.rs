@@ -12,7 +12,7 @@ fn bench_ordinary(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("ordinary_breeding");
     for size in [10, 100, 1000, 10000].iter() {
-        group.bench_function(&format!("ordinary_breeding_{}", size), |b| {
+        group.bench_function(format!("ordinary_breeding_{}", size), |b| {
             b.iter(|| {
                 let options = EvolutionOptions::new(10, LogLevel::None, 5, *size);
                 let parents = vec![

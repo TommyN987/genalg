@@ -110,10 +110,10 @@ fn breed_sequential(
     rng: &mut RandomNumberGenerator,
 ) -> Vec<XCoordinate> {
     let mut children = Vec::with_capacity(num_offspring);
-    children.push(winner.clone());
+    children.push(*winner);
 
     for parent in parents.iter().skip(1) {
-        let mut child = winner.clone();
+        let mut child = *winner;
         child.crossover(parent);
         child.mutate(rng);
         children.push(child);
@@ -121,7 +121,7 @@ fn breed_sequential(
 
     let num_mutation_only = num_offspring.saturating_sub(parents.len());
     for _ in 0..num_mutation_only {
-        let mut child = winner.clone();
+        let mut child = *winner;
         child.mutate(rng);
         children.push(child);
     }
@@ -136,7 +136,7 @@ fn breed_parallel(
     _rng: &mut RandomNumberGenerator, // Not used directly anymore
 ) -> Vec<XCoordinate> {
     let mut children = Vec::with_capacity(num_offspring);
-    children.push(winner.clone());
+    children.push(*winner);
 
     let crossover_parents: Vec<&XCoordinate> = parents.iter().skip(1).collect();
     let num_mutation_only = num_offspring.saturating_sub(parents.len());
@@ -145,7 +145,7 @@ fn breed_parallel(
         let crossover_children: Vec<XCoordinate> = crossover_parents
             .into_par_iter()
             .map(|parent| {
-                let mut child = winner.clone();
+                let mut child = *winner;
                 child.crossover(parent);
 
                 child.mutate_thread_local();
@@ -161,7 +161,7 @@ fn breed_parallel(
         let mutation_children: Vec<XCoordinate> = (0..num_mutation_only)
             .into_par_iter()
             .map(|_| {
-                let mut child = winner.clone();
+                let mut child = *winner;
 
                 child.mutate_thread_local();
 

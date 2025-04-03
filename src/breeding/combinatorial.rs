@@ -574,7 +574,7 @@ mod tests {
 
         assert_eq!(config.repair_probability, 0.3);
         assert_eq!(config.max_repair_attempts, 5);
-        assert_eq!(config.use_penalties, true);
+        assert!(config.use_penalties);
         assert_eq!(config.penalty_weight, 2.5);
     }
 
