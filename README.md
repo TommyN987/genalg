@@ -1060,6 +1060,53 @@ fn main() {
 }
 ```
 
+### Serialization Support
+
+GenAlg provides optional serialization support using `serde`.
+
+#### Enabling Serialization
+
+To use serialization, you need to enable the `serde` feature in your `Cargo.toml`:
+
+```toml
+[dependencies]
+genalg = { version = "0.1.0", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"  # Or any other serde format you prefer
+```
+
+#### Serializable Types
+
+The following GenAlg types support serialization when the feature is enabled:
+
+- `EvolutionResult`
+- `EvolutionOptions`
+- `LogLevel`
+- `CacheType`
+- `ConstraintViolation`
+- `ConstraintError`
+
+#### Making Your Phenotypes Serializable
+
+To make your phenotypes serializable, implement the `Serialize` and `Deserialize` traits from serde:
+
+```rust
+use genalg::phenotype::Phenotype;
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct MyPhenotype {
+    value: f64,
+}
+
+impl Phenotype for MyPhenotype {
+    // ... implementations of crossover and mutate ...
+}
+
+// The SerializablePhenotype trait is automatically implemented
+// for any type that implements both Phenotype and the serde traits
+```
+
 ### Parallel Processing
 
 GenAlg automatically uses parallel processing for fitness evaluation and breeding when the population size exceeds the parallel threshold. Configure this in your `EvolutionOptions`:
@@ -1121,89 +1168,3 @@ fn main() {
     // ... rest of your code ...
 }
 ```
-
-You can control the verbosity of GenAlg's logging by:
-
-1. Setting the `LogLevel` in `EvolutionOptions`:
-   - `LogLevel::Debug`: Detailed logging including phenotypes and scores
-   - `LogLevel::Info`: Basic progress information
-   - `LogLevel::None`: No logging output
-
-2. Setting the tracing level through the environment variable:
-   ```bash
-   RUST_LOG=debug cargo run
-   ```
-
-3. Setting the tracing level programmatically:
-   ```rust
-   tracing_subscriber::fmt()
-       .with_max_level(tracing::Level::DEBUG)
-       .init();
-   ```
-
-## Error Handling
-
-GenAlg provides a comprehensive error handling system:
-
-```rust
-use genalg::error::{GeneticError, Result, ResultExt, OptionExt};
-
-fn my_function() -> Result<()> {
-    // Return specific errors
-    if something_wrong {
-        return Err(GeneticError::Configuration("Invalid parameter".to_string()));
-    }
-    
-    // Convert standard errors with context
-    std::fs::File::open("config.txt").context("Failed to open config file")?;
-    
-    // Convert Option to Result with custom error
-    let best = candidates.iter().max().ok_or_else_genetic(|| 
-        GeneticError::EmptyPopulation
-    )?;
-    
-    Ok(())
-}
-```
-
-## Performance Optimization Tips
-
-1. **Implement `mutate_thread_local()`** for your phenotypes to avoid mutex overhead in parallel processing. This can provide significant performance improvements for large populations.
-
-2. **Tune the parallel threshold** in `EvolutionOptions` based on your specific problem and hardware. The optimal threshold depends on:
-   - CPU core count and performance
-   - Memory bandwidth
-   - Complexity of your fitness function and mutation operations
-   - Size of your phenotype data structures
-
-3. **Use efficient data structures** in your phenotype implementation to minimize memory usage and improve cache locality.
-
-4. **Profile your fitness function** as it's often the performance bottleneck in genetic algorithms.
-
-5. **Consider strategy selection** based on your problem characteristics:
-   - `OrdinaryStrategy` generally performs better for very large populations
-   - `BoundedBreedStrategy` adds constraints but may have higher overhead for certain problems
-
-6. **Benchmark your specific use case** to find the optimal configuration. Use the built-in benchmarks as a starting point:
-
-```bash
-# Run all benchmarks
-cargo bench
-
-# Run specific benchmark
-cargo bench --bench bench_parallel
-```
-
-7. **Consider disabling local search** for performance-critical applications where solution quality can be traded for speed.
-
-8. **Use the appropriate local search application strategy** to balance solution quality and performance:
-   - `TopNStrategy` or `TopPercentStrategy` for applying local search selectively
-   - `ProbabilisticStrategy` for a randomized approach that can be tuned
-
-## License
-
-This project is licensed under the [MIT license](http://opensource.org/licenses/MIT)
-
-### Contribution
-
-Contributions are welcome! Please open an issue or submit a pull request.

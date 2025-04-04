@@ -219,3 +219,50 @@ pub trait Phenotype: Clone + Debug + Send + Sync {
         self.mutate(&mut temp_rng);
     }
 }
+
+/// A marker trait to indicate that a phenotype can be serialized and deserialized.
+///
+/// This trait is automatically implemented for any type that implements
+/// both the `Phenotype` trait and the relevant serde traits.
+///
+/// When the "serde" feature is enabled, this trait requires the
+/// phenotype to implement `serde::Serialize` and `serde::de::DeserializeOwned`,
+/// which allows the phenotype to be serialized and deserialized.
+///
+/// # Example
+///
+/// ```rust
+/// use genalg::phenotype::{Phenotype, SerializablePhenotype};
+/// use genalg::rng::RandomNumberGenerator;
+///
+/// #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+/// struct MyPhenotype {
+///     value: f64,
+/// }
+///
+/// impl Phenotype for MyPhenotype {
+///     fn crossover(&mut self, other: &Self) {
+///         self.value = (self.value + other.value) / 2.0;
+///     }
+///     
+///     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+///         let values = rng.fetch_uniform(-0.1, 0.1, 1);
+///         let delta = values.front().unwrap();
+///         self.value += *delta as f64;
+///     }
+/// }
+///
+/// // SerializablePhenotype is automatically implemented when the feature is enabled
+/// // No manual implementation needed
+/// ```
+#[cfg(feature = "serde")]
+pub trait SerializablePhenotype:
+    Phenotype + serde::Serialize + serde::de::DeserializeOwned
+{
+}
+
+#[cfg(feature = "serde")]
+impl<T> SerializablePhenotype for T where
+    T: Phenotype + serde::Serialize + serde::de::DeserializeOwned
+{
+}

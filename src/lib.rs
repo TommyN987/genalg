@@ -221,41 +221,51 @@
 //! If you want to use local search, you can create a local search manager and pass it to the launcher:
 //!
 //! ```rust
-//! # use genalg::{
-//! #     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
-//! #     phenotype::Phenotype,
-//! #     rng::RandomNumberGenerator,
-//! #     breeding::OrdinaryStrategy,
-//! #     selection::ElitistSelection,
-//! #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
-//! # };
-//! #
-//! # #[derive(Clone, Debug)]
-//! # struct MyPhenotype {
-//! #     value: f64,
-//! # }
-//! #
-//! # impl Phenotype for MyPhenotype {
-//! #     fn crossover(&mut self, other: &Self) {}
-//! #     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {}
-//! # }
-//! #
-//! # #[derive(Clone)]
-//! # struct MyChallenge {
-//! #     target: f64,
-//! # }
-//! #
-//! # impl Challenge<MyPhenotype> for MyChallenge {
-//! #     fn score(&self, phenotype: &MyPhenotype) -> f64 {
-//! #         1.0 / (phenotype.value - self.target).abs().max(0.001)
-//! #     }
-//! # }
-//! #
-//! # let breed_strategy = OrdinaryStrategy::default();
-//! # let selection_strategy = ElitistSelection::default();
-//! # let challenge = MyChallenge { target: 42.0 };
-//! # let options = EvolutionOptions::default();
-//! # let starting_value = MyPhenotype { value: 0.0 };
+//! use genalg::{
+//!     evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
+//!     phenotype::Phenotype,
+//!     rng::RandomNumberGenerator,
+//!     breeding::OrdinaryStrategy,
+//!     selection::ElitistSelection,
+//!     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
+//! };
+//!
+//! // Define a simple phenotype
+//! #[derive(Clone, Debug)]
+//! struct MyPhenotype {
+//!     value: f64,
+//! }
+//!
+//! impl Phenotype for MyPhenotype {
+//!     fn crossover(&mut self, other: &Self) {
+//!         self.value = (self.value + other.value) / 2.0;
+//!     }
+//!
+//!     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+//!         let values = rng.fetch_uniform(-0.1, 0.1, 1);
+//!         let delta = values.front().unwrap();
+//!         self.value += *delta as f64;
+//!     }
+//! }
+//!
+//! // Define a challenge
+//! #[derive(Clone)]
+//! struct MyChallenge {
+//!     target: f64,
+//! }
+//!
+//! impl Challenge<MyPhenotype> for MyChallenge {
+//!     fn score(&self, phenotype: &MyPhenotype) -> f64 {
+//!         1.0 / (phenotype.value - self.target).abs().max(0.001)
+//!     }
+//! }
+//!
+//! // Create components for evolution
+//! let breed_strategy = OrdinaryStrategy::default();
+//! let selection_strategy = ElitistSelection::default();
+//! let challenge = MyChallenge { target: 42.0 };
+//! let options = EvolutionOptions::default();
+//! let starting_value = MyPhenotype { value: 0.0 };
 //!
 //! // Create a local search manager
 //! let hill_climbing = HillClimbing::new(10, 10).unwrap();
@@ -537,6 +547,44 @@ pub use error::{GeneticError, OptionExt, Result, ResultExt};
 pub use evolution::{Challenge, EvolutionLauncher, EvolutionOptions, EvolutionResult, LogLevel};
 pub use local_search::{HillClimbing, LocalSearch, SimulatedAnnealing};
 pub use phenotype::Phenotype;
+/// A marker trait for phenotypes that can be serialized and deserialized.
+///
+/// This trait is automatically implemented for any type that implements both
+/// `Phenotype` and the relevant serde traits (`Serialize` and `DeserializeOwned`).
+/// It's only available when the `serde` feature is enabled.
+///
+/// # Example
+///
+/// ```rust
+/// # #[cfg(feature = "serde")]
+/// # {
+/// use genalg::phenotype::{Phenotype, SerializablePhenotype};
+/// use genalg::rng::RandomNumberGenerator;
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(Clone, Debug, Serialize, Deserialize)]
+/// struct MyPhenotype {
+///     value: f64,
+/// }
+///
+/// impl Phenotype for MyPhenotype {
+///     fn crossover(&mut self, other: &Self) {
+///         self.value = (self.value + other.value) / 2.0;
+///     }
+///     
+///     fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+///         let values = rng.fetch_uniform(-0.1, 0.1, 1);
+///         let delta = values.front().unwrap();
+///         self.value += *delta as f64;
+///     }
+/// }
+///
+/// // SerializablePhenotype is automatically implemented
+/// // No manual implementation needed
+/// # }
+/// ```
+#[cfg(feature = "serde")]
+pub use phenotype::SerializablePhenotype;
 pub use rng::ThreadLocalRng;
 pub use selection::{
     ElitistSelection, RankBasedSelection, RouletteWheelSelection, SelectionStrategy,
