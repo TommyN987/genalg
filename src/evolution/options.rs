@@ -64,7 +64,8 @@
 /// - `Debug`: Detailed information for debugging (maps to tracing::debug!)
 /// - `Info`: General information about progress (maps to tracing::info!)
 /// - `None`: No logging output
-#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LogLevel {
     /// Detailed logging including all phenotypes and scores (maps to tracing::debug!)
     Debug,
@@ -75,6 +76,7 @@ pub enum LogLevel {
 }
 
 /// Defines the type of caching to use for fitness evaluations.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CacheType {
     /// Use a global cache protected by a mutex.
@@ -87,6 +89,7 @@ pub enum CacheType {
     ThreadLocal,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct EvolutionOptions {
     num_generations: usize,
@@ -289,6 +292,7 @@ impl Default for EvolutionOptions {
 /// Builder for `EvolutionOptions`.
 ///
 /// Provides a fluent interface for constructing `EvolutionOptions` instances.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default)]
 pub struct EvolutionOptionsBuilder {
     num_generations: Option<usize>,

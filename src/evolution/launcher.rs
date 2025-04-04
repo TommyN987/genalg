@@ -17,6 +17,7 @@ use crate::{
 };
 
 /// Represents the result of an evolution, containing a phenotype and its associated score.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct EvolutionResult<Pheno: Phenotype> {
     /// The evolved phenotype.

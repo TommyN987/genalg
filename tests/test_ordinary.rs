@@ -279,3 +279,86 @@ fn test_ordinary_strategy_error_offspring() {
         .run();
     assert!(result.is_err());
 }
+
+#[cfg(feature = "serde")]
+mod serde_tests {
+    use genalg::{
+        evolution::{EvolutionOptions, EvolutionResult, LogLevel},
+        phenotype::{Phenotype, SerializablePhenotype},
+        rng::RandomNumberGenerator,
+    };
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+    struct XCoordinate {
+        x: f64,
+    }
+
+    impl XCoordinate {
+        fn new(x: f64) -> Self {
+            Self { x }
+        }
+
+        fn get_x(&self) -> f64 {
+            self.x
+        }
+    }
+
+    impl Phenotype for XCoordinate {
+        fn crossover(&mut self, other: &Self) {
+            self.x = (self.x + other.x) / 2.0;
+        }
+
+        fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+            let delta = *rng.fetch_uniform(-100.0, 100.0, 1).front().unwrap() as f64;
+            self.x += delta / 100.0;
+        }
+    }
+
+    // SerializablePhenotype is automatically implemented because XCoordinate
+    // implements Phenotype, Serialize, and Deserialize
+
+    #[test]
+    fn test_evolution_result_serialization() {
+        let phenotype = XCoordinate::new(42.0);
+        let result = EvolutionResult {
+            pheno: phenotype,
+            score: 123.456,
+        };
+
+        // Serialize to JSON
+        let serialized = serde_json::to_string(&result).unwrap();
+
+        // Deserialize from JSON
+        let deserialized: EvolutionResult<XCoordinate> = serde_json::from_str(&serialized).unwrap();
+
+        // Verify the values
+        assert_eq!(deserialized.pheno.get_x(), 42.0);
+        assert_eq!(deserialized.score, 123.456);
+    }
+
+    #[test]
+    fn test_evolution_options_serialization() {
+        // Create options
+        let mut options = EvolutionOptions::default();
+        options.set_num_generations(100);
+        options.set_population_size(50);
+        options.set_num_offspring(25);
+        options.set_log_level(LogLevel::None);
+
+        // Serialize to JSON
+        let serialized = serde_json::to_string(&options).unwrap();
+
+        // Deserialize from JSON
+        let deserialized: EvolutionOptions = serde_json::from_str(&serialized).unwrap();
+
+        // Verify the values
+        assert_eq!(deserialized.get_num_generations(), 100);
+        assert_eq!(deserialized.get_population_size(), 50);
+        assert_eq!(deserialized.get_num_offspring(), 25);
+
+        // We can't directly compare LogLevel because it doesn't implement PartialEq
+        // But we can verify that it serializes and deserializes
+        assert!(matches!(*deserialized.get_log_level(), LogLevel::None));
+    }
+}

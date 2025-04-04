@@ -175,6 +175,7 @@ pub use combinatorial::{
 };
 
 /// Represents a violation of a constraint.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct ConstraintViolation {
     /// The name of the constraint that was violated
@@ -448,6 +449,7 @@ where
 }
 
 /// Error type for constraint-related operations.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConstraintError {
     /// The constraint name is empty.
