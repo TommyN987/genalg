@@ -573,7 +573,7 @@ where
     /// #     rng::RandomNumberGenerator,
     /// #     breeding::OrdinaryStrategy,
     /// #     selection::ElitistSelection,
-    /// #     local_search::{HillClimbing, AllIndividualsStrategy},
+    /// #     local_search::{HillClimbing, AllIndividualsStrategy, LocalSearchManager},
     /// # };
     /// # #[derive(Clone, Debug)]
     /// # struct MyPhenotype { value: f64 }
@@ -586,14 +586,17 @@ where
     /// # impl Challenge<MyPhenotype> for MyChallenge {
     /// #     fn score(&self, _phenotype: &MyPhenotype) -> f64 { 0.0 }
     /// # }
+    /// # let hill_climbing = HillClimbing::new(10, 10).unwrap();
+    /// # let application_strategy = AllIndividualsStrategy::new();
+    /// # let local_search_manager = LocalSearchManager::new(hill_climbing, application_strategy);
     /// # let breed_strategy = OrdinaryStrategy::default();
     /// # let selection_strategy = ElitistSelection::default();
     /// # let challenge = MyChallenge;
     /// # let options = EvolutionOptions::default();
     /// # let starting_value = MyPhenotype { value: 0.0 };
-    /// # let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
+    /// # let launcher: EvolutionLauncher<MyPhenotype, OrdinaryStrategy, ElitistSelection, HillClimbing, MyChallenge, AllIndividualsStrategy> = EvolutionLauncher::new(breed_strategy, selection_strategy, Some(local_search_manager), challenge);
     ///
-    /// // Configure the evolution process with a seed for reproducibility
+    /// // Configure the evolution process and set a specific seed
     /// let process = launcher
     ///     .configure(options, starting_value)
     ///     .with_seed(42);
@@ -642,7 +645,7 @@ where
     /// # let challenge = MyChallenge;
     /// # let options = EvolutionOptions::default();
     /// # let starting_value = MyPhenotype { value: 0.0 };
-    /// # let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, Some(local_search_manager), challenge);
+    /// # let launcher: EvolutionLauncher<MyPhenotype, OrdinaryStrategy, ElitistSelection, HillClimbing, MyChallenge, AllIndividualsStrategy> = EvolutionLauncher::new(breed_strategy, selection_strategy, Some(local_search_manager), challenge);
     ///
     /// // Configure the evolution process with local search enabled
     /// let process = launcher
@@ -691,7 +694,7 @@ where
     /// # let challenge = MyChallenge;
     /// # let options = EvolutionOptions::default();
     /// # let starting_value = MyPhenotype { value: 0.0 };
-    /// # let launcher = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
+    /// # let launcher: EvolutionLauncher<MyPhenotype, OrdinaryStrategy, ElitistSelection, HillClimbing, MyChallenge, AllIndividualsStrategy> = EvolutionLauncher::new(breed_strategy, selection_strategy, None, challenge);
     ///
     /// // Run the evolution process
     /// let result = launcher
