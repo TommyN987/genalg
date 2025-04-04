@@ -10,6 +10,7 @@ use super::LocalSearch;
 /// Random Restart Hill climbing is a local search algorithm that iteratively moves to better
 /// neighboring solutions until no better solution can be found. The random restart is used to
 /// avoid local optima.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct HillClimbing {
     max_iterations: usize,

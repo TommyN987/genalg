@@ -176,10 +176,8 @@ use std::error::Error as StdError;
 use std::fmt;
 use thiserror::Error;
 
-/// Represents errors that can occur in the genetic algorithm library.
-///
-/// This enum provides specific error variants for different failure scenarios
-/// that may occur during the evolution process.
+/// Represents errors that can occur in genetic algorithm operations.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Error, Debug)]
 pub enum GeneticError {
     /// Error that occurs when a breeding operation fails.

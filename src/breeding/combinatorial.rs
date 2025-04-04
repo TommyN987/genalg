@@ -77,6 +77,7 @@ use crate::phenotype::Phenotype;
 use crate::rng::RandomNumberGenerator;
 use std::fmt::Debug;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct CombinatorialBreedConfig {
     /// The probability of repairing invalid solutions
@@ -106,6 +107,7 @@ impl CombinatorialBreedConfig {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Default)]
 pub struct CombinatorialBreedConfigBuilder {
     repair_probability: Option<f64>,
@@ -156,6 +158,7 @@ impl CombinatorialBreedConfigBuilder {
 /// It supports:
 /// - Constraint-based repair of invalid solutions
 /// - Specialized crossover and mutation operators
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct CombinatorialBreedStrategy<P>
 where

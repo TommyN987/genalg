@@ -9,12 +9,14 @@ use super::LocalSearch;
 /// A hybrid local search algorithm that combines multiple local search algorithms.
 ///
 /// This algorithm applies multiple local search algorithms in sequence.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct HybridLocalSearch<P, C>
 where
     P: Phenotype,
     C: Challenge<P> + Debug,
 {
+    #[cfg_attr(feature = "serde", serde(skip))]
     algorithms: Vec<Arc<dyn LocalSearch<P, C>>>,
 }
 
