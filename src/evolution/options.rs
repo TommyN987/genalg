@@ -75,21 +75,16 @@ pub enum LogLevel {
 }
 
 /// Defines the type of caching to use for fitness evaluations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CacheType {
     /// Use a global cache protected by a mutex.
     /// Better for small populations or when evaluations are extremely expensive.
+    #[default]
     Global,
 
     /// Use thread-local caches for better parallel performance.
     /// Better for large populations with parallel processing.
     ThreadLocal,
-}
-
-impl Default for CacheType {
-    fn default() -> Self {
-        CacheType::Global
-    }
 }
 
 #[derive(Debug, Clone)]
