@@ -31,6 +31,8 @@
 //! - `population_size`: The size of the population in each generation.
 //! - `num_offsprings`: The number of offspring to generate in each generation.
 //! - `parallel_threshold`: The minimum number of items to process in parallel.
+//! - `use_caching`: Whether to enable caching of fitness evaluations.
+//! - `cache_type`: The type of cache to use.
 //!
 //! ### `LogLevel`
 //!
@@ -72,6 +74,24 @@ pub enum LogLevel {
     None,
 }
 
+/// Defines the type of caching to use for fitness evaluations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CacheType {
+    /// Use a global cache protected by a mutex.
+    /// Better for small populations or when evaluations are extremely expensive.
+    Global,
+
+    /// Use thread-local caches for better parallel performance.
+    /// Better for large populations with parallel processing.
+    ThreadLocal,
+}
+
+impl Default for CacheType {
+    fn default() -> Self {
+        CacheType::Global
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EvolutionOptions {
     num_generations: usize,
@@ -80,6 +100,10 @@ pub struct EvolutionOptions {
     num_offsprings: usize,
     /// Minimum number of items to process in parallel
     parallel_threshold: usize,
+    /// Whether to enable caching of fitness evaluations
+    use_caching: bool,
+    /// The type of cache to use
+    cache_type: CacheType,
 }
 
 impl EvolutionOptions {
@@ -115,6 +139,8 @@ impl EvolutionOptions {
             population_size,
             num_offsprings,
             parallel_threshold: 1000, // Default parallel threshold
+            use_caching: false,       // Caching disabled by default
+            cache_type: CacheType::Global,
         }
     }
 
@@ -153,6 +179,8 @@ impl EvolutionOptions {
             population_size,
             num_offsprings,
             parallel_threshold,
+            use_caching: false, // Caching disabled by default
+            cache_type: CacheType::Global,
         }
     }
 
@@ -175,6 +203,16 @@ impl EvolutionOptions {
     /// Returns the minimum number of items to process in parallel.
     pub fn get_parallel_threshold(&self) -> usize {
         self.parallel_threshold
+    }
+
+    /// Returns whether caching is enabled.
+    pub fn get_use_caching(&self) -> bool {
+        self.use_caching
+    }
+
+    /// Returns the type of cache to use.
+    pub fn get_cache_type(&self) -> CacheType {
+        self.cache_type
     }
 
     /// Sets the number of generations.
@@ -200,6 +238,16 @@ impl EvolutionOptions {
     /// Sets the parallel threshold.
     pub fn set_parallel_threshold(&mut self, threshold: usize) {
         self.parallel_threshold = threshold;
+    }
+
+    /// Sets whether to use caching.
+    pub fn set_use_caching(&mut self, use_caching: bool) {
+        self.use_caching = use_caching;
+    }
+
+    /// Sets the type of cache to use.
+    pub fn set_cache_type(&mut self, cache_type: CacheType) {
+        self.cache_type = cache_type;
     }
 
     /// Creates a builder for constructing an `EvolutionOptions` instance.
@@ -237,6 +285,8 @@ impl Default for EvolutionOptions {
             population_size: 2,
             num_offsprings: 20,
             parallel_threshold: 1000, // Default parallel threshold
+            use_caching: false,       // Caching disabled by default
+            cache_type: CacheType::Global,
         }
     }
 }
@@ -251,6 +301,8 @@ pub struct EvolutionOptionsBuilder {
     population_size: Option<usize>,
     num_offsprings: Option<usize>,
     parallel_threshold: Option<usize>,
+    use_caching: Option<bool>,
+    cache_type: Option<CacheType>,
 }
 
 impl EvolutionOptionsBuilder {
@@ -284,6 +336,18 @@ impl EvolutionOptionsBuilder {
         self
     }
 
+    /// Sets whether to use caching.
+    pub fn use_caching(mut self, value: bool) -> Self {
+        self.use_caching = Some(value);
+        self
+    }
+
+    /// Sets the type of cache to use.
+    pub fn cache_type(mut self, value: CacheType) -> Self {
+        self.cache_type = Some(value);
+        self
+    }
+
     /// Builds the `EvolutionOptions` instance.
     pub fn build(self) -> EvolutionOptions {
         EvolutionOptions {
@@ -292,6 +356,8 @@ impl EvolutionOptionsBuilder {
             population_size: self.population_size.unwrap_or(2),
             num_offsprings: self.num_offsprings.unwrap_or(20),
             parallel_threshold: self.parallel_threshold.unwrap_or(1000),
+            use_caching: self.use_caching.unwrap_or(false),
+            cache_type: self.cache_type.unwrap_or(CacheType::Global),
         }
     }
 }
