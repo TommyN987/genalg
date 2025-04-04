@@ -8,12 +8,11 @@ GenAlg is a modern, thread-safe genetic algorithm framework designed for flexibi
 
 ### Key Features
 
-- **Thread-safe**: Designed for parallel processing with `Send` and `Sync` traits
 - **High Performance**: Optimized for speed with thread-local random number generation
 - **Flexible**: Adaptable to a wide range of optimization problems
 - **Extensible**: Easy to implement custom phenotypes, fitness functions, and breeding strategies
-- **Parallel Processing**: Automatic parallelization for large populations using Rayon
 - **Local Search Integration**: Enhance solutions with integrated local search algorithms
+- **Parallel Processing**: Automatic parallelization for large populations using Rayon
 
 ## Installation
 
@@ -196,11 +195,29 @@ let options = EvolutionOptions::builder()
 
 ### Breeding Strategies
 
-GenAlg provides two built-in breeding strategies:
+GenAlg provides three built-in breeding strategies:
 
 1. **OrdinaryStrategy**: A basic breeding strategy where the first parent is considered the winner of the previous generation.
 
 2. **BoundedBreedStrategy**: Similar to `OrdinaryStrategy` but imposes bounds on phenotypes during evolution.
+
+3. **CombinatorialBreedStrategy**: Specialized strategy for combinatorial optimization problems, supporting constraint handling through repair and penalties.
+   ```rust
+   use genalg::breeding::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
+   
+   // Create a configuration with repair and penalties
+   let config = CombinatorialBreedConfig::builder()
+       .repair_probability(0.8)
+       .max_repair_attempts(20)
+       .use_penalties(true)
+       .penalty_weight(5.0)
+       .build();
+       
+   // Create the strategy
+   let mut breed_strategy = CombinatorialBreedStrategy::new(config);
+   
+   // Add constraints (see the Combinatorial Breeding Strategy section for details)
+   ```
 
 ### Selection Strategies
 
@@ -476,6 +493,387 @@ impl<Pheno: Phenotype> BreedStrategy<Pheno> for MyCustomStrategy {
         // Implement your custom breeding logic here
         // ...
     }
+}
+```
+
+### Combinatorial Breeding Strategy
+
+GenAlg provides a specialized breeding strategy for combinatorial optimization problems through the `CombinatorialBreedStrategy`. This strategy is designed to handle discrete solution spaces with complex constraints effectively.
+
+#### What are Combinatorial Optimization Problems?
+
+Combinatorial optimization problems involve finding an optimal arrangement, grouping, ordering, or selection of discrete objects. Examples include:
+
+- **Assignment Problems**: Assigning resources to tasks
+- **Routing Problems**: Finding optimal paths (e.g., Traveling Salesman Problem)
+- **Scheduling Problems**: Arranging tasks in time with dependencies
+- **Packing Problems**: Fitting items into containers with capacity constraints
+
+#### Using CombinatorialBreedStrategy
+
+The `CombinatorialBreedStrategy` offers powerful constraint-handling capabilities:
+
+```rust
+use genalg::{
+    breeding::combinatorial::CombinatorialBreedStrategy,
+    breeding::combinatorial::CombinatorialBreedConfig,
+    constraints::{Constraint, ConstraintViolation},
+    phenotype::Phenotype,
+};
+
+// Create a configuration
+let config = CombinatorialBreedConfig::builder()
+    .repair_probability(0.8)
+    .max_repair_attempts(10)
+    .use_penalties(true)
+    .penalty_weight(5.0)
+    .build();
+
+// Create the breeding strategy
+let mut breed_strategy = CombinatorialBreedStrategy::new(config);
+
+// Add constraints
+breed_strategy.add_constraint(MyConstraint::new());
+```
+
+#### Configuration Options
+
+The `CombinatorialBreedStrategy` can be configured with the following options:
+
+```rust
+// Default configuration
+let default_config = CombinatorialBreedConfig::default();
+
+// Custom configuration with builder pattern
+let config = CombinatorialBreedConfig::builder()
+    .repair_probability(0.8)     // Probability of attempting repair (default: 0.5)
+    .max_repair_attempts(20)     // Maximum repair attempts (default: 10)
+    .use_penalties(true)         // Whether to use penalties (default: false)
+    .penalty_weight(5.0)         // Weight applied to penalties (default: 1.0)
+    .build();
+```
+
+#### Constraint Handling Approaches
+
+The strategy supports two complementary approaches to handling constraints:
+
+1. **Repair-based Approach**: Invalid solutions are repaired during breeding
+   - Controlled by `repair_probability` and `max_repair_attempts`
+   - Attempts to fix invalid solutions by applying constraint repair operations
+
+2. **Penalty-based Approach**: Invalid solutions are penalized during fitness evaluation
+   - Controlled by `use_penalties` and `penalty_weight`
+   - Reduces the fitness of solutions that violate constraints
+
+These approaches can be used separately or in combination:
+
+```rust
+// Repair-only approach
+let repair_config = CombinatorialBreedConfig::builder()
+    .repair_probability(0.9)
+    .max_repair_attempts(20)
+    .use_penalties(false)
+    .build();
+
+// Penalty-only approach
+let penalty_config = CombinatorialBreedConfig::builder()
+    .repair_probability(0.0)
+    .use_penalties(true)
+    .penalty_weight(10.0)
+    .build();
+
+// Combined approach
+let combined_config = CombinatorialBreedConfig::builder()
+    .repair_probability(0.7)
+    .max_repair_attempts(15)
+    .use_penalties(true)
+    .penalty_weight(3.0)
+    .build();
+```
+
+#### Adding Constraints
+
+To add constraints to your breeding strategy:
+
+```rust
+// Create a constraint
+struct UniqueValuesConstraint;
+
+impl Constraint<MyPhenotype> for UniqueValuesConstraint {
+    fn check(&self, phenotype: &MyPhenotype) -> Vec<ConstraintViolation> {
+        // Check if the phenotype violates the constraint
+        // Return a list of violations or empty list if valid
+    }
+    
+    fn repair(&self, phenotype: &mut MyPhenotype) -> bool {
+        // Try to repair the phenotype
+        // Return true if successful, false otherwise
+    }
+    
+    fn repair_with_rng(
+        &self,
+        phenotype: &mut MyPhenotype,
+        rng: &mut RandomNumberGenerator,
+    ) -> bool {
+        // Try to repair using randomization
+        // Return true if successful, false otherwise
+    }
+}
+
+// Add the constraint to the strategy
+let mut strategy = CombinatorialBreedStrategy::new(config);
+strategy.add_constraint(UniqueValuesConstraint);
+```
+
+#### Built-in Combinatorial Constraints
+
+GenAlg provides several built-in constraints for common combinatorial problems:
+
+1. **UniqueElementsConstraint**: Ensures all elements in a collection are unique
+   
+   ```rust
+   use genalg::constraints::combinatorial::UniqueElementsConstraint;
+   
+   // Create a constraint that ensures a Vec<usize> contains unique values
+   let unique_constraint = UniqueElementsConstraint::new(
+       "UniqueValues",
+       |phenotype: &MyPhenotype| phenotype.as_ref().clone()
+   ).unwrap();
+   
+   breed_strategy.add_constraint(unique_constraint);
+   ```
+
+2. **CompleteAssignmentConstraint**: Ensures all required keys have a value
+   
+   ```rust
+   use genalg::constraints::combinatorial::CompleteAssignmentConstraint;
+   use std::collections::{HashMap, HashSet};
+   
+   // Required keys that must be assigned
+   let required_keys: HashSet<usize> = (0..10).collect();
+   
+   // Create a constraint that ensures all tasks are assigned
+   let assignment_constraint = CompleteAssignmentConstraint::new(
+       "AllTasksAssigned",
+       |phenotype: &MyAssignmentPhenotype| phenotype.get_assignments(),
+       required_keys
+   ).unwrap();
+   
+   breed_strategy.add_constraint(assignment_constraint);
+   ```
+
+3. **CapacityConstraint**: Ensures bins don't exceed their capacity
+   
+   ```rust
+   use genalg::constraints::combinatorial::CapacityConstraint;
+   
+   // Create a constraint that ensures bins don't exceed capacity
+   let capacity_constraint = CapacityConstraint::new(
+       "BinCapacity",
+       |phenotype: &MyBinPackingPhenotype| phenotype.get_bin_assignments(),
+       |bin| bin.capacity
+   ).unwrap();
+   
+   breed_strategy.add_constraint(capacity_constraint);
+   ```
+
+4. **DependencyConstraint**: Ensures dependencies between elements are respected
+   
+   ```rust
+   use genalg::constraints::combinatorial::DependencyConstraint;
+   
+   // Define task dependencies (before, after) pairs
+   let dependencies = vec![(1, 2), (2, 3), (1, 4)];
+   
+   // Create a constraint that ensures task dependencies are respected
+   let dependency_constraint = DependencyConstraint::new(
+       "TaskDependencies",
+       |phenotype: &MySchedulingPhenotype| phenotype.get_task_sequence(),
+       dependencies
+   ).unwrap();
+   
+   breed_strategy.add_constraint(dependency_constraint);
+   ```
+
+#### Using Penalty-Adjusted Challenges
+
+When using the penalty-based approach, you need to create a penalty-adjusted challenge:
+
+```rust
+use genalg::constraints::PenaltyAdjustedChallenge;
+
+// Original challenge
+let original_challenge = MyChallenge::new();
+
+// Create a penalty-adjusted challenge
+let penalty_challenge = breed_strategy.create_penalty_challenge(original_challenge);
+
+// Use the penalty-adjusted challenge in the evolution launcher
+let launcher = EvolutionLauncher::new(
+    breed_strategy,
+    selection_strategy,
+    local_search_manager,
+    penalty_challenge  // Use penalty-adjusted challenge
+);
+```
+
+#### Complete Example: Traveling Salesman Problem
+
+Here's a complete example showing how to use the combinatorial breeding strategy for a Traveling Salesman Problem:
+
+```rust
+use genalg::{
+    breeding::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig},
+    constraints::combinatorial::UniqueElementsConstraint,
+    evolution::{Challenge, EvolutionLauncher, EvolutionOptions, LogLevel},
+    phenotype::Phenotype,
+    rng::RandomNumberGenerator,
+    selection::TournamentSelection,
+};
+use std::fmt::Debug;
+
+// Define a phenotype representing a route
+#[derive(Clone, Debug)]
+struct Route {
+    cities: Vec<usize>,
+}
+
+impl Phenotype for Route {
+    fn crossover(&mut self, other: &Self) {
+        // Order crossover (OX)
+        if self.cities.is_empty() || other.cities.is_empty() {
+            return;
+        }
+        
+        // Select a random segment from other parent
+        let start = rand::random::<usize>() % self.cities.len();
+        let end = start + (rand::random::<usize>() % (self.cities.len() - start));
+        
+        // Copy the segment
+        let segment: Vec<usize> = other.cities[start..=end].to_vec();
+        
+        // Create a list of cities not in the segment
+        let remaining: Vec<usize> = self.cities.iter()
+            .filter(|&city| !segment.contains(city))
+            .cloned()
+            .collect();
+        
+        // Create the new route
+        let mut new_route = Vec::with_capacity(self.cities.len());
+        let mut remaining_idx = 0;
+        
+        for i in 0..self.cities.len() {
+            if i >= start && i <= end {
+                new_route.push(segment[i - start]);
+            } else {
+                new_route.push(remaining[remaining_idx]);
+                remaining_idx += 1;
+            }
+        }
+        
+        self.cities = new_route;
+    }
+
+    fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+        // Swap mutation
+        if self.cities.len() < 2 {
+            return;
+        }
+        
+        let idx1 = (rng.fetch_uniform(0.0, self.cities.len() as f32, 1)[0] as usize) % self.cities.len();
+        let mut idx2 = (rng.fetch_uniform(0.0, self.cities.len() as f32, 1)[0] as usize) % self.cities.len();
+        
+        while idx1 == idx2 {
+            idx2 = (rng.fetch_uniform(0.0, self.cities.len() as f32, 1)[0] as usize) % self.cities.len();
+        }
+        
+        self.cities.swap(idx1, idx2);
+    }
+}
+
+// Fitness function calculating total distance
+#[derive(Clone)]
+struct TSPChallenge {
+    distances: Vec<Vec<f64>>,
+}
+
+impl Challenge<Route> for TSPChallenge {
+    fn score(&self, phenotype: &Route) -> f64 {
+        if phenotype.cities.is_empty() {
+            return f64::NEG_INFINITY;
+        }
+        
+        let mut total_distance = 0.0;
+        for i in 0..phenotype.cities.len() {
+            let from = phenotype.cities[i];
+            let to = phenotype.cities[(i + 1) % phenotype.cities.len()];
+            total_distance += self.distances[from][to];
+        }
+        
+        // Return negative distance (higher score is better)
+        -total_distance
+    }
+}
+
+fn main() -> genalg::error::Result<()> {
+    // Create distance matrix for 5 cities
+    let distances = vec![
+        vec![0.0, 10.0, 15.0, 20.0, 25.0],
+        vec![10.0, 0.0, 35.0, 25.0, 30.0],
+        vec![15.0, 35.0, 0.0, 30.0, 10.0],
+        vec![20.0, 25.0, 30.0, 0.0, 15.0],
+        vec![25.0, 30.0, 10.0, 15.0, 0.0],
+    ];
+    
+    // Create the challenge
+    let challenge = TSPChallenge { distances };
+    
+    // Create initial solution
+    let initial_route = Route { cities: vec![0, 1, 2, 3, 4] };
+    
+    // Create breeding strategy with constraints
+    let config = CombinatorialBreedConfig::builder()
+        .repair_probability(0.9)
+        .max_repair_attempts(20)
+        .build();
+        
+    let mut breed_strategy = CombinatorialBreedStrategy::new(config);
+    
+    // Add constraint to ensure each city appears exactly once
+    let unique_constraint = UniqueElementsConstraint::new(
+        "UniqueCities",
+        |route: &Route| route.cities.clone()
+    )?;
+    
+    breed_strategy.add_constraint(unique_constraint);
+    
+    // Create selection strategy
+    let selection = TournamentSelection::new(3);
+    
+    // Create launcher
+    let launcher = EvolutionLauncher::new(
+        breed_strategy,
+        selection,
+        None,  // No local search
+        challenge
+    );
+    
+    // Configure and run evolution
+    let options = EvolutionOptions::builder()
+        .num_generations(100)
+        .population_size(50)
+        .num_offspring(100)
+        .log_level(LogLevel::Info)
+        .build();
+        
+    let result = launcher
+        .configure(options, initial_route)
+        .run()?;
+        
+    println!("Best route: {:?}", result.pheno.cities);
+    println!("Total distance: {}", -result.score);
+    
+    Ok(())
 }
 ```
 
