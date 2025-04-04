@@ -8,17 +8,52 @@ use crate::{
 
 /// Trait for wrapping a challenge with caching functionality.
 ///
-/// This trait provides methods to wrap a challenge with different
-/// types of caching based on the configuration.
+/// This trait is automatically implemented for all types that implement the `Challenge` trait,
+/// allowing any challenge to be easily enhanced with caching capabilities without modifying
+/// its core implementation. Caching can significantly improve performance by avoiding redundant
+/// fitness evaluations, which is especially valuable when fitness calculations are expensive.
+///
+/// To use caching, the phenotype type must implement the `CacheKey` trait, which defines
+/// how to generate a unique identifier for each phenotype. This key is used as the lookup
+/// value in the cache.
+///
+/// # Performance Considerations
+///
+/// - **Cache Growth**: The cache grows unbounded by default. For long-running evolutions or
+///   large populations, consider clearing the cache periodically.
+///
+/// - **Thread Contention**: The global cache is protected by a mutex, which may become a
+///   bottleneck in highly parallel workloads. For these cases, consider the thread-local
+///   caching option.
+///
+/// - **Memory Usage**: Monitor memory usage if you're caching a very large number of phenotypes,
+///   as each cache entry consumes memory.
+///
+/// # Type Parameters
+///
+/// * `P` - The phenotype type
 pub trait CachingChallenge<P: Phenotype>: Challenge<P> + Sized + Clone {
     /// Wraps this challenge with a global cache.
     ///
-    /// This method wraps the challenge in a `CachedChallenge`, which uses a mutex-protected
-    /// cache shared across all threads.
+    /// This method creates a new `CachedChallenge` that wraps the current challenge,
+    /// adding a mutex-protected cache shared across all threads. Each unique phenotype
+    /// (according to its `cache_key()`) is evaluated only once, and subsequent evaluations
+    /// use the cached fitness value.
+    ///
+    /// # Performance Characteristics
+    ///
+    /// - **Advantages**: Ensures maximum cache reuse across all threads.
+    /// - **Limitations**: May create contention when many threads try to access the cache
+    ///   simultaneously. This can become a bottleneck in highly parallel scenarios.
+    ///
+    /// # Type Constraints
+    ///
+    /// The phenotype type `P` must implement the `CacheKey` trait, which defines how to
+    /// generate a unique identifier for each phenotype.
     ///
     /// # Returns
     ///
-    /// A `CachedChallenge` that wraps this challenge.
+    /// A `CachedChallenge` that wraps this challenge with a global cache.
     ///
     /// # Example
     ///
@@ -52,6 +87,11 @@ pub trait CachingChallenge<P: Phenotype>: Challenge<P> + Sized + Clone {
     /// #
     /// # let challenge = MyChallenge;
     /// let cached_challenge = challenge.with_global_cache();
+    ///
+    /// // Use the cached challenge like any other challenge
+    /// let phenotype = MyPhenotype { value: 42.0 };
+    /// let fitness = cached_challenge.score(&phenotype); // First evaluation is computed
+    /// let fitness_again = cached_challenge.score(&phenotype); // Uses cached value
     /// ```
     fn with_global_cache(&self) -> CachedChallenge<P, Self>
     where
@@ -59,12 +99,25 @@ pub trait CachingChallenge<P: Phenotype>: Challenge<P> + Sized + Clone {
 
     /// Wraps this challenge with a thread-local cache.
     ///
-    /// This method wraps the challenge in a `ThreadLocalCachedChallenge`, which uses
-    /// a separate cache for each thread to avoid mutex contention.
+    /// This method creates a new `ThreadLocalCachedChallenge` that wraps the current challenge,
+    /// adding a separate cache for each thread. This approach avoids mutex contention in
+    /// highly parallel workloads by giving each thread its own independent cache.
+    ///
+    /// # Performance Characteristics
+    ///
+    /// - **Advantages**: Eliminates mutex contention, improving parallel performance.
+    /// - **Limitations**: May result in redundant evaluations across threads, as the same
+    ///   phenotype evaluated in different threads will have separate cache entries.
+    ///   Also uses more memory as each thread maintains its own cache.
+    ///
+    /// # Type Constraints
+    ///
+    /// The phenotype type `P` must implement the `CacheKey` trait, which defines how to
+    /// generate a unique identifier for each phenotype.
     ///
     /// # Returns
     ///
-    /// A `ThreadLocalCachedChallenge` that wraps this challenge.
+    /// A `ThreadLocalCachedChallenge` that wraps this challenge with a thread-local cache.
     ///
     /// # Example
     ///
@@ -98,6 +151,13 @@ pub trait CachingChallenge<P: Phenotype>: Challenge<P> + Sized + Clone {
     /// #
     /// # let challenge = MyChallenge;
     /// let thread_local_cached_challenge = challenge.with_thread_local_cache();
+    ///
+    /// // Ideal for parallel processing with rayon or other threading libraries
+    /// use rayon::prelude::*;
+    /// let phenotypes = vec![MyPhenotype { value: 1.0 }, MyPhenotype { value: 2.0 }];
+    /// let scores: Vec<f64> = phenotypes.par_iter()
+    ///     .map(|p| thread_local_cached_challenge.score(p))
+    ///     .collect();
     /// ```
     fn with_thread_local_cache(&self) -> ThreadLocalCachedChallenge<P, Self>
     where
@@ -105,16 +165,23 @@ pub trait CachingChallenge<P: Phenotype>: Challenge<P> + Sized + Clone {
 
     /// Wraps this challenge with a cache of the specified type.
     ///
-    /// This method wraps the challenge in either a `CachedChallenge` or
-    /// `ThreadLocalCachedChallenge` based on the provided cache type.
+    /// This method provides a convenient way to choose between global and thread-local
+    /// caching based on runtime configuration.
     ///
     /// # Arguments
     ///
-    /// * `cache_type` - The type of cache to use.
+    /// * `cache_type` - The type of cache to use (Global or ThreadLocal).
     ///
     /// # Returns
     ///
     /// A boxed `Challenge` that wraps this challenge with the specified cache type.
+    /// The returned value is boxed to provide type erasure, allowing the client code
+    /// to handle different cache implementations uniformly.
+    ///
+    /// # Type Constraints
+    ///
+    /// The phenotype type `P` must implement the `CacheKey` trait and have a `'static`
+    /// lifetime. The challenge implementation must also have a `'static` lifetime.
     ///
     /// # Example
     ///
@@ -147,7 +214,15 @@ pub trait CachingChallenge<P: Phenotype>: Challenge<P> + Sized + Clone {
     /// # }
     /// #
     /// # let challenge = MyChallenge;
-    /// let cached_challenge = challenge.with_cache(CacheType::Global);
+    /// // Select caching type based on configuration or runtime conditions
+    /// let use_thread_local = std::thread::available_parallelism().unwrap().get() > 4;
+    /// let cache_type = if use_thread_local {
+    ///     CacheType::ThreadLocal
+    /// } else {
+    ///     CacheType::Global
+    /// };
+    ///
+    /// let cached_challenge = challenge.with_cache(cache_type);
     /// ```
     fn with_cache(&self, cache_type: CacheType) -> Box<dyn Challenge<P>>
     where
@@ -181,15 +256,29 @@ where
     }
 }
 
-/// A trait adapter that conditionally adds caching to a challenge.
+/// A challenge adapter that can conditionally enable caching.
 ///
-/// This adapter wraps a challenge and provides the same functionality,
-/// but adds caching if specified in the configuration.
+/// This adapter wraps a challenge and provides the same functionality as the wrapped challenge,
+/// allowing caching to be configured at runtime. Currently, it simply delegates to the inner
+/// challenge without implementing actual caching - it serves as a placeholder for future
+/// conditional caching functionality.
 ///
 /// # Type Parameters
 ///
 /// * `P` - The phenotype type
 /// * `C` - The inner challenge type
+///
+/// # Note
+///
+/// Important: In the current implementation, the `CachingChallengeSwitcher` does not actually
+/// implement caching functionality. It always calls the inner challenge's score method directly,
+/// regardless of whether a cache type is set. It is intended as a structural pattern for
+/// future enhancements.
+///
+/// For active caching, use the `CachingChallenge` trait methods directly:
+/// - `challenge.with_global_cache()`
+/// - `challenge.with_thread_local_cache()`
+/// - `challenge.with_cache(cache_type)`
 #[derive(Debug, Clone)]
 pub struct CachingChallengeSwitcher<P, C>
 where
@@ -214,7 +303,7 @@ where
     ///
     /// # Returns
     ///
-    /// A new `CachingChallengeSwitcher` instance.
+    /// A new `CachingChallengeSwitcher` instance with caching disabled by default.
     ///
     /// # Example
     ///
@@ -260,6 +349,12 @@ where
     /// # Returns
     ///
     /// This switcher configured to use caching.
+    ///
+    /// # Note
+    ///
+    /// In the current implementation, this setting does not actually enable caching functionality.
+    /// The switcher still calls the inner challenge's score method directly. This method is
+    /// intended for future enhancements to the conditional caching functionality.
     ///
     /// # Example
     ///
@@ -319,6 +414,9 @@ where
     C: Challenge<P>,
 {
     fn score(&self, phenotype: &P) -> f64 {
+        // Currently, always use the inner challenge directly
+        // In a future implementation, this could conditionally use caching
+        // based on the cache_type field
         self.inner.score(phenotype)
     }
 }
