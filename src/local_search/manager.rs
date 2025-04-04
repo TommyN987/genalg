@@ -16,6 +16,7 @@ use std::marker::PhantomData;
 /// The `LocalSearchManager` determines which individuals should undergo local search
 /// based on a configurable application strategy, and applies the specified local search
 /// algorithm to those individuals.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct LocalSearchManager<P, L, A, C>
 where
@@ -28,6 +29,7 @@ where
     algorithm: L,
     /// The strategy for selecting individuals to apply local search to.
     application_strategy: A,
+    #[cfg_attr(feature = "serde", serde(skip))]
     _marker: PhantomData<(P, C)>,
 }
 

@@ -9,6 +9,7 @@ use super::LocalSearch;
 ///
 /// Simulated annealing is a probabilistic local search algorithm that allows
 /// moves to worse solutions with a probability that decreases over time.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct SimulatedAnnealing {
     max_iterations: usize,

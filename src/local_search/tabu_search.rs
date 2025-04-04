@@ -12,6 +12,7 @@ use super::LocalSearch;
 ///
 /// Tabu search is a local search algorithm that maintains a list of recently
 /// visited solutions (the tabu list) to avoid cycling and to escape local optima.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct TabuSearch<P>
 where
@@ -23,6 +24,8 @@ where
     max_neighbors: usize,
     /// The maximum size of the tabu list
     tabu_list_size: usize,
+    /// PhantomData to track generic parameter P
+    #[cfg_attr(feature = "serde", serde(skip))]
     _marker: PhantomData<P>,
 }
 

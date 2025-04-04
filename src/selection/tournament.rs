@@ -58,6 +58,7 @@ use crate::selection::selection_strategy::SelectionStrategy;
 ///     Ok(())
 /// }
 /// ```
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct TournamentSelection {
     tournament_size: usize,

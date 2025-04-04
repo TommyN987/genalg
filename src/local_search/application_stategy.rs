@@ -34,6 +34,7 @@ where
 }
 
 /// A strategy that applies local search to all individuals in the population.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy)]
 pub struct AllIndividualsStrategy;
 
@@ -70,6 +71,7 @@ where
 }
 
 /// A strategy that applies local search to the top N individuals by fitness.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy)]
 pub struct TopNStrategy {
     n: usize,
@@ -154,6 +156,7 @@ where
 }
 
 /// A strategy that applies local search to a percentage of the top individuals by fitness.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy)]
 pub struct TopPercentStrategy {
     percent: f64,
@@ -254,6 +257,7 @@ where
 }
 
 /// A strategy that applies local search to individuals with a certain probability.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy)]
 pub struct ProbabilisticStrategy {
     /// The probability of applying local search to each individual (0.0 to 1.0).

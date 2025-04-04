@@ -46,6 +46,7 @@ pub trait Magnitude<Pheno: Phenotype> {
 /// Configuration for the `BoundedBreedStrategy`.
 ///
 /// This struct holds the configuration parameters for the `BoundedBreedStrategy`.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct BoundedBreedConfig {
     /// The maximum number of attempts to develop a phenotype within bounds.
@@ -63,6 +64,7 @@ impl Default for BoundedBreedConfig {
 /// Builder for `BoundedBreedConfig`.
 ///
 /// Provides a fluent interface for constructing `BoundedBreedConfig` instances.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default)]
 pub struct BoundedBreedConfigBuilder {
     max_development_attempts: Option<usize>,
@@ -110,6 +112,7 @@ impl BoundedBreedConfig {
 /// However, the `BoundedBreedStrategy` imposes bounds on the phenotypes during evolution.
 /// The algorithm develops a phenotype within the specified bounds, ensuring that the resulting
 /// phenotype satisfies the constraints set up by the `Magnitude` trait.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct BoundedBreedStrategy<Pheno>
 where

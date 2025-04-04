@@ -18,6 +18,7 @@ use crate::{
 /// The `OrdinaryStrategy` struct represents a basic breeding strategy where the first
 /// parent is considered as the winner of the previous generation, and the remaining
 /// parents are used to create new individuals through crossover and mutation.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub struct OrdinaryStrategy {
     // No fields needed
