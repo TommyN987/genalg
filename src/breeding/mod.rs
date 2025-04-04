@@ -51,4 +51,7 @@ where
 }
 
 pub use bounded::{BoundedBreedConfig, BoundedBreedConfigBuilder, BoundedBreedStrategy, Magnitude};
+pub use combinatorial::{
+    CombinatorialBreedConfig, CombinatorialBreedConfigBuilder, CombinatorialBreedStrategy,
+};
 pub use ordinary::OrdinaryStrategy;
