@@ -474,211 +474,192 @@ impl<Pheno: Phenotype> BreedStrategy<Pheno> for MyCustomStrategy {
         rng: &mut RandomNumberGenerator,
     ) -> Result<Vec<Pheno>> {
         // Implement your custom breeding logic here
-        // This could include:
-        // - Selection mechanisms (tournament, roulette wheel, etc.)
-        // - Custom crossover operations
-        // - Specialized mutation rates
-        // - Elitism strategies
-        // - Adaptive parameter adjustments
-        
-        // Example implementation (simplified):
-        let mut children = Vec::with_capacity(evol_options.get_num_offspring());
-        
-        if parents.is_empty() {
-            return Err(GeneticError::EmptyPopulation);
-        }
-        
-        // Use the first parent as a template
-        let template = &parents[0];
-        
-        // Generate offspring
-        for _ in 0..evol_options.get_num_offspring() {
-            // Select parents using your custom selection method
-            let parent1 = select_parent(parents, rng);
-            let parent2 = select_parent(parents, rng);
-            
-            // Create child from parent1
-            let mut child = parent1.clone();
-            
-            // Apply crossover with some probability
-            if rng.fetch_uniform(0.0, 1.0, 1).front().unwrap() < &(self.crossover_rate as f32) {
-                child.crossover(&parent2);
-            }
-            
-            // Apply mutation with some probability
-            if rng.fetch_uniform(0.0, 1.0, 1).front().unwrap() < &(self.mutation_rate as f32) {
-                child.mutate(rng);
-            }
-            
-            children.push(child);
-        }
-        
-        Ok(children)
+        // ...
     }
-}
-
-// Helper function for parent selection
-fn select_parent<Pheno: Phenotype>(parents: &[Pheno], rng: &mut RandomNumberGenerator) -> &Pheno {
-    // Simple random selection for this example
-    let idx = (rng.fetch_uniform(0.0, parents.len() as f32, 1).front().unwrap() 
-               * parents.len() as f32) as usize;
-    &parents[idx % parents.len()]
 }
 ```
 
-Once you've implemented your custom strategy, you can use it with the `EvolutionLauncher` just like the built-in strategies:
+### Fitness Caching
+
+GenAlg provides built-in caching functionality to improve performance by avoiding redundant fitness evaluations. This is particularly useful in scenarios with:
+
+- Expensive fitness evaluations
+- Frequent occurrences of similar phenotypes
+- Large populations or many generations
+
+#### How Caching Works
+
+Caching in GenAlg is implemented as a wrapper around your challenge:
+
+1. When a phenotype is evaluated, the system first checks if its fitness value is in the cache
+2. If found, the cached value is returned without recalculating
+3. If not found, the actual fitness function is called and the result is stored in the cache
+
+#### Enabling Caching
+
+There are two ways to enable caching:
+
+1. **Via Evolution Options** (simplest):
 
 ```rust
-// Create your custom strategy
-let breed_strategy = MyCustomStrategy::new(0.8, 0.2);
-let selection_strategy = ElitistSelection::default();
-
-// Create the launcher with your strategies
-let launcher = EvolutionLauncher::new(
-    breed_strategy, 
-    selection_strategy, 
-    None, // No local search
-    challenge
-);
-
-// Configure and run the evolution
+let options = EvolutionOptions::builder()
+    .num_generations(100)
+    .population_size(50)
+    .use_caching(true)  // Enable caching
+    .cache_type(CacheType::Global)  // Choose cache type
+    .build();
+    
 let result = launcher
     .configure(options, starting_value)
     .run()
     .unwrap();
 ```
 
-This flexibility allows you to implement specialized breeding approaches such as:
-
-- **Island Models**: Evolve multiple sub-populations with occasional migration
-- **Age-Based Selection**: Consider the age of individuals in the selection process
-- **Niching Methods**: Maintain diversity by promoting solutions in different regions
-- **Adaptive Parameter Control**: Dynamically adjust mutation and crossover rates
-- **Multi-objective Optimization**: Handle multiple competing objectives
-
-### Combinatorial Optimization
-
-For combinatorial optimization problems, GenAlg provides specialized components:
-
-#### Constraint Handling
-
-Define constraints that solutions must satisfy:
+2. **Direct Caching Challenge Creation** (for more control):
 
 ```rust
-use genalg::constraints::{Constraint, ConstraintManager, ConstraintViolation};
+use genalg::evolution::caching_challenge::CachingChallenge;
 
-// Define a constraint
-#[derive(Debug, Clone)]
-struct UniqueElementsConstraint;
+// Original challenge
+let challenge = MyChallenge { target: 42.0 };
 
-impl<P> Constraint<P> for UniqueElementsConstraint
-where
-    P: Phenotype + AsRef<Vec<usize>>,
-{
-    fn check(&self, phenotype: &P) -> Vec<ConstraintViolation> {
-        let elements = phenotype.as_ref();
-        let mut seen = HashSet::new();
-        let mut violations = Vec::new();
+// With global cache (thread-safe, shared across all threads)
+let global_cached_challenge = challenge.with_global_cache();
 
-        for (idx, element) in elements.iter().enumerate() {
-            if !seen.insert(element) {
-                violations.push(ConstraintViolation::new(
-                    "UniqueElements",
-                    format!("Duplicate element {:?} at position {}", element, idx),
-                ));
-            }
-        }
+// Or with thread-local cache (separate cache per thread)
+let thread_local_cached_challenge = challenge.with_thread_local_cache();
 
-        violations
-    }
-    
-    // Optionally implement repair methods
-    fn repair(&self, phenotype: &mut P) -> bool {
-        // Repair logic
-        false
-    }
-    
-    fn repair_with_rng(&self, phenotype: &mut P, rng: &mut RandomNumberGenerator) -> bool {
-        // Repair logic with randomness
-        false
-    }
-}
-
-// Use the constraint manager
-let mut constraint_manager = ConstraintManager::new();
-constraint_manager.add_constraint(UniqueElementsConstraint);
-
-// Check if a solution is valid
-let is_valid = constraint_manager.is_valid(&solution);
-
-// Get all constraint violations
-let violations = constraint_manager.check_all(&solution);
-
-// Try to repair an invalid solution
-let repaired = constraint_manager.repair_all(&solution);
+// Or at runtime based on configuration
+let cache_type = CacheType::Global; // or CacheType::ThreadLocal
+let cached_challenge = challenge.with_cache(cache_type);
 ```
 
-#### Combinatorial Breeding Strategy
+#### Implementing the CacheKey Trait
 
-Use the specialized breeding strategy for combinatorial problems:
-
-```rust
-use  genalg::breeding::combinatorial::{CombinatorialBreedStrategy, CombinatorialBreedConfig};
-use genalg::constraints::{Constraint, ConstraintManager};
-
-// Configure the breeding strategy
-let config = CombinatorialBreedConfig::builder()
-    .repair_probability(0.8)
-    .max_repair_attempts(20)
-    .use_penalties(true)
-    .penalty_weight(2.5)
-    .build();
-
-// Create the breeding strategy
-let mut strategy = CombinatorialBreedStrategy::new(config);
-
-// Add constraints
-strategy.add_constraint(MyConstraint);
-
-// Use with the evolution launcher
-let launcher = EvolutionLauncher::new(
-    strategy, 
-    selection_strategy, 
-    local_search_manager, // Optional
-    challenge
-);
-```
-
-#### Fitness Caching
-
-Improve performance by caching fitness evaluations:
+For caching to work, your phenotype must implement the `CacheKey` trait:
 
 ```rust
-use genalg::caching::{CacheKey, CachedChallenge, ThreadLocalCachedChallenge};
+use genalg::caching::CacheKey;
 
-// Implement CacheKey for your phenotype
 impl CacheKey for MyPhenotype {
-    type Key = i32;
-    
+    // Choose an appropriate type that uniquely identifies phenotypes with the same fitness
+    type Key = Vec<f64>;  // Could be any Eq + Hash + Clone + Debug + Send + Sync type
+
     fn cache_key(&self) -> Self::Key {
-        // Generate a unique key for this phenotype
-        self.value as i32
+        // Return a value that uniquely identifies phenotypes with the same fitness
+        // For simple phenotypes, this could be the direct representation
+        self.values.clone()
+        
+        // For floating-point values, consider rounding to handle precision issues
+        // self.values.iter().map(|v| (v * 1000.0).round() as i64).collect()
+    }
+}
+```
+
+Guidelines for implementing `CacheKey`:
+
+1. The key must uniquely identify phenotypes that would have the same fitness score
+2. The key generation should be computationally efficient
+3. For floating-point values, consider rounding to handle precision issues
+4. For complex phenotypes, only include the parts that affect fitness
+
+#### Cache Types
+
+GenAlg provides two cache implementations:
+
+1. **Global Cache** (`CacheType::Global`):
+   - Single cache shared across all threads
+   - Protected by a mutex
+   - Maximizes cache reuse
+   - Good for problems with low thread contention or single-threaded use
+
+2. **Thread-Local Cache** (`CacheType::ThreadLocal`):
+   - Separate cache for each thread
+   - No mutex contention
+   - Better performance for highly parallel workloads
+   - May have some redundant evaluations across threads
+
+#### Performance Considerations
+
+- **Cache Growth**: The cache grows unbounded by default. For long-running evolutions, consider clearing it periodically.
+- **Thread Contention**: For highly parallel workloads, thread-local caching may outperform global caching due to reduced mutex contention.
+- **Key Generation**: Ensure the `cache_key()` method is efficient, as it's called for every fitness evaluation.
+- **Memory Usage**: Monitor memory usage if caching a very large number of phenotypes.
+
+#### Example: Advanced Caching
+
+```rust
+use genalg::{
+    evolution::{Challenge, EvolutionLauncher, EvolutionOptions, CacheType},
+    phenotype::Phenotype,
+    caching::CacheKey,
+    rng::RandomNumberGenerator,
+};
+
+// Define a phenotype with CacheKey implementation
+#[derive(Clone, Debug)]
+struct Vector {
+    values: Vec<f64>,
+}
+
+impl Phenotype for Vector {
+    fn crossover(&mut self, other: &Self) {
+        // Implementation omitted for brevity
+    }
+
+    fn mutate(&mut self, rng: &mut RandomNumberGenerator) {
+        // Implementation omitted for brevity
     }
 }
 
-// Wrap your challenge with caching
-let cached_challenge = CachedChallenge::new(challenge);
+impl CacheKey for Vector {
+    type Key = Vec<i64>;
 
-// Or use thread-local caching for parallel contexts
-let thread_local_cached_challenge = ThreadLocalCachedChallenge::new(challenge);
+    fn cache_key(&self) -> Self::Key {
+        // Round to nearest 0.001 to handle floating-point imprecision
+        self.values.iter()
+            .map(|v| (v * 1000.0).round() as i64)
+            .collect()
+    }
+}
 
-// Use with the evolution launcher
-let launcher = EvolutionLauncher::new(
-    strategy, 
-    selection_strategy, 
-    local_search_manager, // Optional
-    cached_challenge
-);
+// Expensive challenge that benefits from caching
+#[derive(Clone)]
+struct ExpensiveChallenge;
+
+impl Challenge<Vector> for ExpensiveChallenge {
+    fn score(&self, phenotype: &Vector) -> f64 {
+        // Simulate a computationally expensive fitness function
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        phenotype.values.iter().sum::<f64>()
+    }
+}
+
+// Run evolution with caching
+fn main() {
+    let starting_vector = Vector { values: vec![0.0, 0.0, 0.0] };
+    let challenge = ExpensiveChallenge;
+    
+    let options = EvolutionOptions::builder()
+        .num_generations(100)
+        .population_size(20)
+        .num_offspring(40)
+        .use_caching(true)
+        .cache_type(CacheType::ThreadLocal) // Better for parallel execution
+        .build();
+        
+    let launcher = EvolutionLauncher::builder()
+        .with_challenge(challenge)
+        .build()
+        .unwrap();
+        
+    let result = launcher
+        .configure(options, starting_vector)
+        .run()
+        .unwrap();
+        
+    println!("Best solution: {:?}, Fitness: {}", result.pheno, result.score);
+}
 ```
 
 ### Parallel Processing
